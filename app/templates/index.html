@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BookNimbus - Login / Sign Up</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    /* Reset */
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+
+    body {
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #0f0c29;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .background {
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(135deg, #4b6cb7, #182848, #8E2DE2);
+      animation: rotateBG 20s linear infinite;
+      z-index: -1;
+    }
+
+    @keyframes rotateBG {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .container {
+      position: relative;
+      width: 360px;
+      background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(15px);
+      border-radius: 16px;
+      padding: 40px 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+      color: #fff;
+      z-index: 1;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 32px;
+      margin-bottom: 30px;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+    }
+
+    .tabs {
+      display: flex;
+      position: relative;
+      margin-bottom: 25px;
+    }
+
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 12px 0;
+      cursor: pointer;
+      font-weight: 600;
+      color: #ddd;
+      transition: color 0.3s;
+      position: relative;
+      z-index: 2;
+    }
+
+    .tab.active { color: #fff; }
+
+    .underline {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 50%;
+      height: 3px;
+      background: #8E2DE2;
+      border-radius: 3px;
+      transition: transform 0.3s;
+    }
+
+    form {
+      display: none;
+      flex-direction: column;
+    }
+
+    form.active { display: flex; }
+
+    input {
+      padding: 14px;
+      margin-bottom: 18px;
+      border-radius: 8px;
+      border: none;
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      font-size: 16px;
+    }
+
+    input::placeholder { color: rgba(255,255,255,0.7); }
+
+    input:focus {
+      outline: 2px solid #8E2DE2;
+      background: rgba(255,255,255,0.15);
+    }
+
+    button {
+      padding: 14px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #4b6cb7, #8E2DE2);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="background"></div>
+
+  <div class="container">
+    <h1>BookNimbus</h1>
+
+    <div class="tabs">
+      <div class="tab active" id="login-tab">Login</div>
+      <div class="tab" id="signup-tab">Sign Up</div>
+      <div class="underline"></div>
+    </div>
+
+    <!-- Login Form -->
+    <form id="login-form" class="active">
+      <input type="text" name="username" placeholder="Username" minlength="6" maxlength="16" required>
+      <input type="password" name="password" placeholder="Password" minlength="8" maxlength="14" required>
+      <button type="submit">Login</button>
+    </form>
+
+    <!-- Sign Up Form -->
+    <form id="signup-form">
+      <input type="text" name="username" placeholder="Username" minlength="6" maxlength="16" required>
+      <input type="password" name="password" placeholder="Password" minlength="8" maxlength="14" required>
+      <input type="password" name="confirm_password" placeholder="Confirm Password" minlength="8" maxlength="14" required>
+      <button type="submit">Sign Up</button>
+    </form>
+  </div>
+
+  <script>
+    const loginTab = document.getElementById('login-tab');
+    const signupTab = document.getElementById('signup-tab');
+    const loginForm = document.getElementById('login-form');
+    const signupForm = document.getElementById('signup-form');
+    const underline = document.querySelector('.underline');
+
+    // Tab switching
+    loginTab.addEventListener('click', () => {
+      loginTab.classList.add('active');
+      signupTab.classList.remove('active');
+      loginForm.classList.add('active');
+      signupForm.classList.remove('active');
+      underline.style.transform = 'translateX(0)';
+    });
+
+    signupTab.addEventListener('click', () => {
+      signupTab.classList.add('active');
+      loginTab.classList.remove('active');
+      signupForm.classList.add('active');
+      loginForm.classList.remove('active');
+      underline.style.transform = 'translateX(100%)';
+    });
+
+    // Send login data to Django backend
+    loginForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const data = {
+        username: loginForm.username.value,
+        password: loginForm.password.value
+      };
+      try {
+        const res = await fetch('/login/', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(data)
+        });
+        const response = await res.json();
+        alert(response.message);
+      } catch (err) {
+        alert("Error connecting to backend.");
+        console.error(err);
+      }
+    });
+
+    // Send signup data to Django backend
+    signupForm.addEventListener('submit', async e => {
+      e.preventDefault();
+      const password = signupForm.password.value;
+      const confirm_password = signupForm.confirm_password.value;
+
+      if (password !== confirm_password) {
+        alert("Passwords do not match!");
+        return;
+      }
+
+      const data = {
+        username: signupForm.username.value,
+        password: password,
+        confirm_password: confirm_password
+      };
+
+      try {
+        const res = await fetch('/signup/', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(data)
+        });
+        const response = await res.json();
+        alert(response.message);
+      } catch (err) {
+        alert("Error connecting to backend.");
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>
