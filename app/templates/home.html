@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BookNimbus - Home</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #fff;
+    }
+
+    .navbar {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 20px 0;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .username {
+      font-size: 16px;
+      font-weight: 500;
+      padding: 10px 20px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 25px;
+    }
+
+    .logout-btn {
+      padding: 10px 24px;
+      background: rgba(255, 71, 87, 0.8);
+      border: none;
+      border-radius: 25px;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 14px;
+    }
+
+    .logout-btn:hover {
+      background: #ff4757;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 71, 87, 0.4);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 60px auto;
+      padding: 0 30px;
+    }
+
+    .welcome {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .welcome h1 {
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 15px;
+      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .welcome p {
+      font-size: 18px;
+      opacity: 0.9;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 25px;
+      margin-bottom: 50px;
+    }
+
+    .stat-card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(10px);
+      padding: 30px;
+      border-radius: 20px;
+      text-align: center;
+      transition: all 0.3s;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    .stat-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+    }
+
+    .stat-number {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .stat-label {
+      font-size: 16px;
+      opacity: 0.9;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+      margin-top: 40px;
+    }
+
+    .feature-card {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      padding: 35px;
+      border-radius: 20px;
+      transition: all 0.3s;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .feature-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .feature-icon {
+      font-size: 40px;
+      margin-bottom: 20px;
+    }
+
+    .feature-card h3 {
+      font-size: 22px;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    .feature-card p {
+      font-size: 15px;
+      line-height: 1.6;
+      opacity: 0.9;
+    }
+
+    .cta-section {
+      text-align: center;
+      margin-top: 60px;
+      padding: 50px 30px;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .cta-section h2 {
+      font-size: 32px;
+      margin-bottom: 20px;
+    }
+
+    .cta-section p {
+      font-size: 18px;
+      margin-bottom: 30px;
+      opacity: 0.9;
+    }
+
+    .cta-btn {
+      padding: 16px 40px;
+      background: #fff;
+      color: #667eea;
+      border: none;
+      border-radius: 30px;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .cta-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    @media (max-width: 768px) {
+      .welcome h1 {
+        font-size: 36px;
+      }
+
+      .nav-container {
+        flex-direction: column;
+        gap: 15px;
+      }
+
+      .stats {
+        grid-template-columns: 1fr;
+      }
+
+      .features {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="logo">📚 BookNimbus</div>
+      <div class="nav-right">
+        <div class="username">👤 {{ username }}</div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="welcome">
+      <h1>Welcome back, {{ username }}! 👋</h1>
+      <p>Your personal library awaits</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-icon">📚</div>
+        <div class="stat-number">0</div>
+        <div class="stat-label">Books in Library</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📖</div>
+        <div class="stat-number">0</div>
+        <div class="stat-label">Currently Reading</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">✅</div>
+        <div class="stat-number">0</div>
+        <div class="stat-label">Completed</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">⭐</div>
+        <div class="stat-number">0</div>
+        <div class="stat-label">Favorites</div>
+      </div>
+    </div>
+
+    <div class="features">
+      <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <h3>Access Anywhere</h3>
+        <p>Your library syncs across all devices. Read on your phone, tablet, or computer seamlessly.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔍</div>
+        <h3>Smart Search</h3>
+        <p>Find any book instantly with powerful search and filtering options.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Reading Stats</h3>
+        <p>Track your reading progress, set goals, and celebrate your achievements.</p>
+      </div>
+    </div>
+
+    <div class="cta-section">
+      <h2>Start Building Your Library</h2>
+      <p>Add your first book and begin your reading journey today</p>
+      <button class="cta-btn" onclick="alert('Add Book feature coming soon!')">Add Your First Book</button>
+    </div>
+  </div>
+
+  <script>
+    function logout() {
+      if (confirm('Are you sure you want to logout?')) {
+        window.location.href = '/logout/';
+      }
+    }
+
+    // Add smooth animations on load
+    document.addEventListener('DOMContentLoaded', () => {
+      const cards = document.querySelectorAll('.stat-card, .feature-card');
+      cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+          card.style.transition = 'all 0.5s ease-out';
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        }, index * 100);
+      });
+    });
+  </script>
+</body>
+</html>
