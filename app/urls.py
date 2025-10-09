@@ -13,4 +13,8 @@ urlpatterns = [
     path('reset-password-page/', views.reset_password_page, name='reset_password_page'),
     path('reset-password/', views.reset_password, name='reset_password'),
     path('logout/', views.logout_view, name='logout'),
+
+    # Google OAuth URLs
+    path('google-auth/', views.google_auth_init, name='google_auth'),
+    path('google-callback/', views.google_callback, name='google_callback'),
 ]

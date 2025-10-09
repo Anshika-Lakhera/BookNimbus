@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentication Result - BookNimbus</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #0a0e27;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        .success { color: #2ed573; }
+        .error { color: #ff4757; }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {% if success %}
+            <h1 class="success">✅ Success!</h1>
+            <p>{{ message }}</p>
+            <div class="spinner"></div>
+            <p>Redirecting...</p>
+            <script>
+                setTimeout(() => {
+                    window.location.href = "{{ redirect_url }}";
+                }, 2000);
+            </script>
+        {% else %}
+            <h1 class="error">❌ Error</h1>
+            <p>{{ message }}</p>
+            <a href="/" style="color: #667eea; text-decoration: none;">Return to Login</a>
+        {% endif %}
+    </div>
+</body>
+</html>

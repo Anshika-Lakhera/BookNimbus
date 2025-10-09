@@ -1,15 +1,22 @@
 import json
+import requests
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
+from django.conf import settings
 from .models import Credentials
 
 # In-memory tokens (for demo)
 verification_tokens = {}
 password_reset_tokens = {}
+
+# Google OAuth2 Configuration - REPLACE WITH YOUR ACTUAL CREDENTIALS
+GOOGLE_CLIENT_ID = '1098327710097-5mqs9s1linj3rqck41phtl7ibh18u5ra.apps.googleusercontent.com'
+GOOGLE_CLIENT_SECRET = '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'
+GOOGLE_REDIRECT_URI = 'http://127.0.0.1:8000/google-callback/'
 
 
 def index(request):
@@ -22,6 +29,127 @@ def home(request):
     if not username:
         return redirect('index')
     return render(request, 'home.html', {'username': username})
+
+
+@csrf_exempt
+def google_auth_init(request):
+    """Start Google OAuth flow"""
+    if request.method == 'POST':
+        # Generate Google OAuth URL
+        auth_url = (
+            "https://accounts.google.com/o/oauth2/v2/auth?"
+            f"client_id={GOOGLE_CLIENT_ID}&"
+            "response_type=code&"
+            f"redirect_uri={GOOGLE_REDIRECT_URI}&"
+            "scope=openid%20email%20profile&"
+            "access_type=offline&"
+            "prompt=consent"
+        )
+        return JsonResponse({'auth_url': auth_url})
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
+
+
+@csrf_exempt
+def google_callback(request):
+    """Handle Google OAuth callback"""
+    code = request.GET.get('code')
+
+    if not code:
+        return render(request, 'auth_result.html', {
+            'success': False,
+            'message': 'Authentication failed: No authorization code received'
+        })
+
+    try:
+        # Exchange code for tokens
+        token_url = "https://oauth2.googleapis.com/token"
+        token_data = {
+            'client_id': GOOGLE_CLIENT_ID,
+            'client_secret': GOOGLE_CLIENT_SECRET,
+            'code': code,
+            'grant_type': 'authorization_code',
+            'redirect_uri': GOOGLE_REDIRECT_URI,
+        }
+
+        token_response = requests.post(token_url, data=token_data)
+        token_json = token_response.json()
+
+        if 'error' in token_json:
+            return render(request, 'auth_result.html', {
+                'success': False,
+                'message': f'Token exchange failed: {token_json["error"]}'
+            })
+
+        access_token = token_json['access_token']
+
+        # Get user info from Google
+        userinfo_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+        headers = {'Authorization': f'Bearer {access_token}'}
+        userinfo_response = requests.get(userinfo_url, headers=headers)
+        userinfo = userinfo_response.json()
+
+        if 'error' in userinfo:
+            return render(request, 'auth_result.html', {
+                'success': False,
+                'message': f'Failed to get user info: {userinfo["error"]}'
+            })
+
+        google_id = userinfo['id']
+        email = userinfo['email']
+        name = userinfo.get('name', '').replace(' ', '_')
+        given_name = userinfo.get('given_name', '')
+
+        # Generate username if name not available
+        if not name or name == '_':
+            name = email.split('@')[0]
+
+        # Check if user exists by google_id
+        user = Credentials.objects.filter(google_id=google_id).first()
+
+        if not user:
+            # Check if user exists by email (for existing users linking Google)
+            user = Credentials.objects.filter(Email=email).first()
+
+            if user:
+                # Link existing account with Google
+                user.google_id = google_id
+                user.save(update_fields=['google_id'])
+            else:
+                # Create new user with Google
+                base_username = name
+                username = base_username
+                counter = 1
+
+                # Ensure unique username
+                while Credentials.objects.filter(UserName=username).exists():
+                    username = f"{base_username}_{counter}"
+                    counter += 1
+
+                user = Credentials.objects.create(
+                    UserName=username,
+                    Email=email,
+                    google_id=google_id,
+                    is_verified=True
+                )
+
+        # Store in session
+        request.session['username'] = user.UserName
+        request.session['user_id'] = user.UserID
+        request.session['is_google_user'] = True
+
+        return render(request, 'auth_result.html', {
+            'success': True,
+            'message': f'Welcome, {user.UserName}!',
+            'redirect_url': '/home/'
+        })
+
+    except Exception as e:
+        print(f"✗ GOOGLE AUTH ERROR: {e}")
+        return render(request, 'auth_result.html', {
+            'success': False,
+            'message': 'Authentication failed. Please try again.'
+        })
 
 
 @csrf_exempt
@@ -131,6 +259,13 @@ def login_view(request):
             if not user:
                 return JsonResponse({'status': 'error', 'message': 'Invalid username or password'}, status=401)
 
+            # Check if this is a Google user trying to use password
+            if user.google_id and not user.Password:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'This account uses Google authentication. Please sign in with Google.'
+                }, status=401)
+
             if not check_password(password, user.Password):
                 return JsonResponse({'status': 'error', 'message': 'Invalid username or password'}, status=401)
 
@@ -143,6 +278,7 @@ def login_view(request):
             # Store username in session
             request.session['username'] = username
             request.session['user_id'] = user.UserID
+            request.session['is_google_user'] = False
 
             return JsonResponse({
                 'status': 'success',
@@ -170,6 +306,13 @@ def forgot_password(request):
             user = Credentials.objects.filter(Email=email).first()
             if not user:
                 return JsonResponse({'status': 'error', 'message': 'No account found with this email'}, status=404)
+
+            # Check if it's a Google user
+            if user.google_id:
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'This account uses Google authentication. Please sign in with Google.'
+                }, status=400)
 
             token = get_random_string(32)
             password_reset_tokens[token] = user.UserID
