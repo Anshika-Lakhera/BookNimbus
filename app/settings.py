@@ -5,9 +5,9 @@ from django.urls import reverse_lazy
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'booknimbus-key'
-DEBUG = True
-ALLOWED_HOSTS = ['*']
+SECRET_KEY = os.environ.get('SECRET_KEY', 'your-production-secret-key-change-this')
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+ALLOWED_HOSTS = ['book-nimbus.onrender.com', 'localhost', '127.0.0.1']
 
 # Add these to INSTALLED_APPS
 INSTALLED_APPS = [
@@ -17,7 +17,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.sites',  # Required for allauth
+    'django.contrib.sites',
 
     # Third party apps
     'allauth',
@@ -30,13 +30,14 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Add this
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'allauth.account.middleware.AccountMiddleware',  # Add this
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'app.urls'
@@ -62,7 +63,7 @@ WSGI_APPLICATION = 'app.wsgi.application'
 # Database (Supabase PostgreSQL)
 DATABASES = {
     'default': dj_database_url.config(
-        default='postgresql://postgres:1MwqTio7vomkZLdx@db.arwnfwtjpjhegtgdrpmi.supabase.co:5432/postgres',
+        default=os.environ.get('DATABASE_URL', 'postgresql://postgres:1MwqTio7vomkZLdx@db.arwnfwtjpjhegtgdrpmi.supabase.co:5432/postgres'),
         conn_max_age=600,
         ssl_require=True
     )
@@ -82,24 +83,35 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
-# Static files
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+# Static files 
+STATIC_URL = '/static/' 
+STATICFILES_DIRS = [BASE_DIR / 'static'] 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CSRF
-CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000']
+# CSRF - UPDATE THIS FOR RENDER
+CSRF_TRUSTED_ORIGINS = [
+    'https://book-nimbus.onrender.com',
+    'http://localhost:8000', 
+    'http://127.0.0.1:8000'
+]
 
-# Email (SMTP)
+# Session settings for production
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+
+# Email (SMTP) - Use environment variables
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'booknimbus@gmail.com'
-EMAIL_HOST_PASSWORD = 'arzp ewsl hqci bdod'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'booknimbus@gmail.com')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'your-app-password')
 
 # Allauth Configuration
 SITE_ID = 1
@@ -118,7 +130,7 @@ ACCOUNT_UNIQUE_EMAIL = True
 LOGIN_REDIRECT_URL = '/home/'
 LOGOUT_REDIRECT_URL = '/'
 
-# Social Account settings
+# Social Account settings - UPDATE WITH ENVIRONMENT VARIABLES
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'SCOPE': [
@@ -129,8 +141,8 @@ SOCIALACCOUNT_PROVIDERS = {
             'access_type': 'online',
         },
         'APP': {
-            'client_id': 'YOUR_GOOGLE_CLIENT_ID',  # You'll get this from Google Cloud Console
-            'secret': 'YOUR_GOOGLE_CLIENT_SECRET',  # You'll get this from Google Cloud Console
+            'client_id': os.environ.get('GOOGLE_CLIENT_ID', '1098327710097-5mqs9s1linj3rqck41phtl7ibh18u5ra.apps.googleusercontent.com'),
+            'secret': os.environ.get('GOOGLE_CLIENT_SECRET', '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'),
             'key': ''
         }
     }
@@ -138,4 +150,4 @@ SOCIALACCOUNT_PROVIDERS = {
 
 # Auto-create users with social accounts
 SOCIALACCOUNT_AUTO_SIGNUP = True
-SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'  # Google already verifies email
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none'
