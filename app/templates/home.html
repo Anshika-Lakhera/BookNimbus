@@ -3,196 +3,601 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="BookNimbus - Your personal book library management solution">
+  <meta property="og:title" content="BookNimbus - Your Digital Library">
+  <meta property="og:description" content="Organize, track, and discover your next favorite book">
+  <meta property="og:type" content="website">
   <title>BookNimbus - Home</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/x-icon" href="../static/nimbus.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    :root {
+      --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --card-bg: rgba(255, 255, 255, 0.1);
+      --card-hover: rgba(255, 255, 255, 0.15);
+      --glass-bg: rgba(255, 255, 255, 0.08);
+      --border-color: rgba(255, 255, 255, 0.15);
+      --shadow-sm: 0 4px 15px rgba(0, 0, 0, 0.2);
+      --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.3);
+      --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.4);
+      --spacing-xs: 8px;
+      --spacing-sm: 16px;
+      --spacing-md: 24px;
+      --spacing-lg: 32px;
+      --spacing-xl: 48px;
+      --radius-sm: 12px;
+      --radius-md: 20px;
+      --radius-lg: 24px;
+      --radius-xl: 28px;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
 
     body {
       min-height: 100vh;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: var(--primary-gradient);
       color: #fff;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px);
+      background-size: 50px 50px;
+      animation: float 20s linear infinite;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    @keyframes float {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(50px, 50px); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes countUp {
+      from { opacity: 0; transform: translateY(10px) scale(0.8); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    @keyframes shimmer {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
     }
 
     .navbar {
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      padding: 20px 0;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: var(--spacing-sm) 0;
+      box-shadow: var(--shadow-md);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      transition: all 0.3s ease;
+    }
+
+    .navbar.scrolled {
+      background: rgba(255, 255, 255, 0.12);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     }
 
     .nav-container {
-      max-width: 1200px;
+      max-width: 1400px;
       margin: 0 auto;
-      padding: 0 30px;
+      padding: 0 var(--spacing-lg);
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: var(--spacing-md);
     }
 
-    .logo {
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      transition: transform 0.3s ease;
+      cursor: pointer;
+    }
+
+    .logo-container:hover {
+      transform: scale(1.05);
+    }
+
+    .logo-icon {
+      width: 120px;
+      height: 120px;
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow-sm);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .logo-container:hover .logo-icon {
+      box-shadow: var(--shadow-md);
+      transform: rotate(5deg) scale(1.05);
+    }
+
+    .logo-text {
       font-size: 28px;
-      font-weight: 700;
+      font-weight: 800;
       color: #fff;
+      letter-spacing: -0.5px;
+    }
+
+    .search-container {
+      flex: 1;
+      max-width: 600px;
+      position: relative;
+    }
+
+    .search-wrapper {
+      position: relative;
+    }
+
+    .search-bar {
+      width: 100%;
+      padding: 14px 140px 14px 50px;
+      background: rgba(255, 255, 255, 0.12);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 30px;
+      color: #fff;
+      font-size: 15px;
+      outline: none;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .search-bar::placeholder {
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .search-bar:focus {
+      background: rgba(255, 255, 255, 0.18);
+      border-color: rgba(255, 255, 255, 0.4);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      transform: translateY(-2px);
+      padding-right: 140px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 18px;
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .ai-badge {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+      animation: pulse 2s infinite;
     }
 
     .nav-right {
       display: flex;
       align-items: center;
-      gap: 20px;
+      gap: var(--spacing-sm);
     }
 
     .username {
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 500;
       padding: 10px 20px;
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.12);
       border-radius: 25px;
+      border: 1px solid var(--border-color);
+      transition: all 0.3s ease;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .username:hover {
+      background: rgba(255, 255, 255, 0.18);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
     }
 
     .logout-btn {
       padding: 10px 24px;
-      background: rgba(255, 71, 87, 0.8);
+      background: rgba(255, 71, 87, 0.85);
       border: none;
       border-radius: 25px;
       color: #fff;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.3s;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       font-size: 14px;
+      box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);
     }
 
     .logout-btn:hover {
       background: #ff4757;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(255, 71, 87, 0.4);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(255, 71, 87, 0.5);
+    }
+
+    .logout-btn:active {
+      transform: translateY(-1px);
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1400px;
       margin: 60px auto;
-      padding: 0 30px;
+      padding: 0 var(--spacing-lg);
+      position: relative;
+      z-index: 1;
     }
 
     .welcome {
       text-align: center;
       margin-bottom: 60px;
+      animation: slideIn 0.8s ease;
     }
 
     .welcome h1 {
-      font-size: 48px;
-      font-weight: 700;
-      margin-bottom: 15px;
-      text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+      font-size: 64px;
+      font-weight: 800;
+      margin-bottom: var(--spacing-sm);
+      text-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+      background: linear-gradient(135deg, #fff 0%, rgba(255, 255, 255, 0.8) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.2;
     }
 
     .welcome p {
-      font-size: 18px;
+      font-size: 22px;
       opacity: 0.9;
+      font-weight: 300;
+      letter-spacing: 0.5px;
     }
 
     .stats {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 25px;
-      margin-bottom: 50px;
+      gap: var(--spacing-md);
+      margin-bottom: 60px;
     }
 
     .stat-card {
-      background: rgba(255, 255, 255, 0.15);
-      backdrop-filter: blur(10px);
-      padding: 30px;
-      border-radius: 20px;
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: var(--spacing-lg);
+      border-radius: var(--radius-lg);
       text-align: center;
-      transition: all 0.3s;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
       cursor: pointer;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      border: 1px solid var(--border-color);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+      transition: left 0.5s;
+    }
+
+    .stat-card:hover::before {
+      left: 100%;
     }
 
     .stat-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-      background: rgba(255, 255, 255, 0.2);
+      transform: translateY(-12px) scale(1.02);
+      box-shadow: var(--shadow-lg);
+      background: var(--card-hover);
+      border-color: rgba(255, 255, 255, 0.3);
     }
 
     .stat-icon {
-      font-size: 48px;
-      margin-bottom: 15px;
+      font-size: 56px;
+      margin-bottom: var(--spacing-md);
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      display: inline-block;
+    }
+
+    .stat-card:hover .stat-icon {
+      transform: scale(1.2) rotate(10deg);
     }
 
     .stat-number {
-      font-size: 36px;
-      font-weight: 700;
-      margin-bottom: 10px;
+      font-size: 48px;
+      font-weight: 800;
+      margin-bottom: var(--spacing-xs);
+      transition: all 0.3s ease;
+      animation: countUp 0.6s ease;
+    }
+
+    .stat-card:hover .stat-number {
+      transform: scale(1.1);
     }
 
     .stat-label {
       font-size: 16px;
       opacity: 0.9;
+      font-weight: 400;
+      letter-spacing: 0.3px;
     }
 
-    .features {
+    .section-header {
+      margin-bottom: var(--spacing-lg);
+      animation: slideIn 0.8s ease;
+    }
+
+    .section-header h2 {
+      font-size: 36px;
+      font-weight: 700;
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .section-header p {
+      font-size: 18px;
+      opacity: 0.85;
+      font-weight: 300;
+    }
+
+    .book-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 30px;
-      margin-top: 40px;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--spacing-md);
+      margin-bottom: 60px;
     }
 
-    .feature-card {
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      padding: 35px;
+    .book-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .book-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 100%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      pointer-events: none;
+    }
+
+    .book-card:hover::after {
+      opacity: 1;
+    }
+
+    .book-card:hover {
+      transform: translateY(-15px) scale(1.03);
+      box-shadow: var(--shadow-lg);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .book-cover {
+      width: 100%;
+      height: 380px;
+      object-fit: cover;
+      transition: transform 0.4s ease;
+    }
+
+    .book-card:hover .book-cover {
+      transform: scale(1.05);
+    }
+
+    .book-badge {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      padding: 6px 12px;
       border-radius: 20px;
-      transition: all 0.3s;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-    }
-
-    .feature-card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-      background: rgba(255, 255, 255, 0.15);
-    }
-
-    .feature-icon {
-      font-size: 40px;
-      margin-bottom: 20px;
-    }
-
-    .feature-card h3 {
-      font-size: 22px;
-      margin-bottom: 12px;
+      font-size: 11px;
       font-weight: 600;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     }
 
-    .feature-card p {
-      font-size: 15px;
-      line-height: 1.6;
+    .badge-popular {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .badge-new {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .badge-trending {
+      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    }
+
+    .book-info {
+      padding: var(--spacing-md);
+    }
+
+    .book-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: var(--spacing-xs);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .book-author {
+      font-size: 14px;
+      opacity: 0.8;
+      margin-bottom: var(--spacing-sm);
+      font-weight: 400;
+    }
+
+    .book-rating {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-xs);
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .stars {
+      color: #ffd700;
+      font-size: 16px;
+    }
+
+    .rating-text {
+      font-size: 14px;
       opacity: 0.9;
+      font-weight: 500;
+    }
+
+    .book-actions {
+      display: flex;
+      gap: var(--spacing-xs);
+      margin-top: var(--spacing-sm);
+    }
+
+    .action-btn {
+      flex: 1;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: var(--radius-sm);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+    }
+
+    .action-btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .action-btn:active {
+      transform: translateY(0);
     }
 
     .cta-section {
       text-align: center;
-      margin-top: 60px;
-      padding: 50px 30px;
-      background: rgba(255, 255, 255, 0.1);
-      backdrop-filter: blur(10px);
-      border-radius: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      margin-top: 80px;
+      padding: 60px var(--spacing-lg);
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--border-color);
+      transition: all 0.4s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.05) 50%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .cta-section:hover::before {
+      opacity: 1;
+    }
+
+    .cta-section:hover {
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-lg);
+      background: var(--card-hover);
     }
 
     .cta-section h2 {
-      font-size: 32px;
-      margin-bottom: 20px;
+      font-size: 40px;
+      margin-bottom: var(--spacing-md);
+      font-weight: 700;
     }
 
     .cta-section p {
-      font-size: 18px;
-      margin-bottom: 30px;
+      font-size: 20px;
+      margin-bottom: var(--spacing-xl);
       opacity: 0.9;
+      font-weight: 300;
     }
 
     .cta-btn {
-      padding: 16px 40px;
+      padding: 18px 45px;
       background: #fff;
       color: #667eea;
       border: none;
@@ -200,41 +605,128 @@
       font-weight: 600;
       font-size: 16px;
       cursor: pointer;
-      transition: all 0.3s;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+      position: relative;
+      z-index: 1;
     }
 
     .cta-btn:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
+      transform: translateY(-5px) scale(1.05);
+      box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4);
+      background: linear-gradient(135deg, #fff 0%, #f8f8f8 100%);
+    }
+
+    .cta-btn:active {
+      transform: translateY(-2px) scale(1.02);
+    }
+
+    .loading-skeleton {
+      background: linear-gradient(90deg, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: var(--radius-sm);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    @media (max-width: 1024px) {
+      .book-grid {
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      }
     }
 
     @media (max-width: 768px) {
       .welcome h1 {
-        font-size: 36px;
+        font-size: 42px;
       }
 
       .nav-container {
-        flex-direction: column;
-        gap: 15px;
+        flex-wrap: wrap;
+      }
+
+      .search-container {
+        order: 3;
+        flex: 1 1 100%;
+        max-width: 100%;
+      }
+
+      .logo-icon {
+        width: 80px;
+        height: 80px;
+      }
+
+      .logo-text {
+        font-size: 22px;
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .book-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .container {
+        padding: 0 var(--spacing-md);
+      }
+
+      .section-header h2 {
+        font-size: 28px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .welcome h1 {
+        font-size: 32px;
       }
 
       .stats {
         grid-template-columns: 1fr;
       }
 
-      .features {
-        grid-template-columns: 1fr;
+      .stat-number {
+        font-size: 36px;
+      }
+    }
+
+    @media print {
+      body {
+        background: white;
+        color: black;
+      }
+
+      .navbar, .logout-btn, .cta-section {
+        display: none;
       }
     }
   </style>
 </head>
 <body>
-  <nav class="navbar">
+  <nav class="navbar" id="navbar">
     <div class="nav-container">
-      <div class="logo">📚 BookNimbus</div>
+      <div class="logo-container">
+        <img src="../static/nimbus.ico" alt="BookNimbus" class="logo-icon" height="542" width="542">
+        <div class="logo-text">BookNimbus</div>
+      </div>
+
+      <div class="search-container">
+        <div class="search-wrapper">
+          <span class="search-icon">🔍</span>
+          <input type="text" class="search-bar" placeholder="Search your library..." id="searchBar">
+          <div class="ai-badge">AI SEARCH SOON!</div>
+        </div>
+      </div>
+
       <div class="nav-right">
-        <div class="username">👤 {{ username }}</div>
+        <div class="username" id="username">👤 {{ username }}</div>
         <button class="logout-btn" onclick="logout()">Logout</button>
       </div>
     </div>
@@ -242,76 +734,220 @@
 
   <div class="container">
     <div class="welcome">
-      <h1>Welcome back, {{ username }}! 👋</h1>
+      <h1>Welcome back, {{ username }}!</h1>
       <p>Your personal library awaits</p>
     </div>
 
     <div class="stats">
       <div class="stat-card">
         <div class="stat-icon">📚</div>
-        <div class="stat-number">0</div>
+        <div class="stat-number" data-target="12">0</div>
         <div class="stat-label">Books in Library</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon">📖</div>
-        <div class="stat-number">0</div>
+        <div class="stat-number" data-target="3">0</div>
         <div class="stat-label">Currently Reading</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon">✅</div>
-        <div class="stat-number">0</div>
+        <div class="stat-number" data-target="8">0</div>
         <div class="stat-label">Completed</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon">⭐</div>
-        <div class="stat-number">0</div>
-        <div class="stat-label">Favorites</div>
       </div>
     </div>
 
-    <div class="features">
-      <div class="feature-card">
-        <div class="feature-icon">📱</div>
-        <h3>Access Anywhere</h3>
-        <p>Your library syncs across all devices. Read on your phone, tablet, or computer seamlessly.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">🔍</div>
-        <h3>Smart Search</h3>
-        <p>Find any book instantly with powerful search and filtering options.</p>
-      </div>
-      <div class="feature-card">
-        <div class="feature-icon">📊</div>
-        <h3>Reading Stats</h3>
-        <p>Track your reading progress, set goals, and celebrate your achievements.</p>
-      </div>
+    <div class="section-header">
+      <h2>Your Library</h2>
+      <p>Recent additions and ongoing reads</p>
+    </div>
+
+    <div class="book-grid" id="bookGrid">
     </div>
 
     <div class="cta-section">
-      <h2>Start Building Your Library</h2>
-      <p>Add your first book and begin your reading journey today</p>
-      <button class="cta-btn" onclick="alert('Add Book feature coming soon!')">Add Your First Book</button>
+      <h2>Discover Your Next Favorite Book</h2>
+      <p>Explore new worlds, ideas, and stories that inspire you</p>
+      <button class="cta-btn" onclick="addBook()">Add New Book</button>
     </div>
   </div>
 
   <script>
+    const books = [
+      {
+        title: "The Midnight Library",
+        author: "Matt Haig",
+        rating: 4.5,
+        cover: "https://picsum.photos/seed/book1/400/600",
+        badge: "popular"
+      },
+      {
+        title: "Atomic Habits",
+        author: "James Clear",
+        rating: 4.8,
+        cover: "https://picsum.photos/seed/book2/400/600",
+        badge: "trending"
+      },
+      {
+        title: "Project Hail Mary",
+        author: "Andy Weir",
+        rating: 4.7,
+        cover: "https://picsum.photos/seed/book3/400/600",
+        badge: "new"
+      },
+      {
+        title: "The Thursday Murder Club",
+        author: "Richard Osman",
+        rating: 4.4,
+        cover: "https://picsum.photos/seed/book4/400/600",
+        badge: "popular"
+      },
+      {
+        title: "Educated",
+        author: "Tara Westover",
+        rating: 4.6,
+        cover: "https://picsum.photos/seed/book5/400/600",
+        badge: "trending"
+      },
+      {
+        title: "The Silent Patient",
+        author: "Alex Michaelides",
+        rating: 4.3,
+        cover: "https://picsum.photos/seed/book6/400/600",
+        badge: "new"
+      }
+    ];
+
+    function getBadgeClass(badge) {
+      return `badge-${badge}`;
+    }
+
+    function getBadgeText(badge) {
+      const badges = {
+        popular: 'Popular',
+        new: 'New',
+        trending: 'Trending'
+      };
+      return badges[badge] || badge;
+    }
+
+    function renderBooks() {
+      const grid = document.getElementById('bookGrid');
+      grid.innerHTML = books.map((book, index) => `
+        <div class="book-card" style="animation-delay: ${index * 0.1}s;">
+          <img src="${book.cover}" alt="${book.title}" class="book-cover">
+          <div class="book-badge ${getBadgeClass(book.badge)}">${getBadgeText(book.badge)}</div>
+          <div class="book-info">
+            <div class="book-title">${book.title}</div>
+            <div class="book-author">by ${book.author}</div>
+            <div class="book-rating">
+              <span class="stars">★★★★★</span>
+              <span class="rating-text">${book.rating}</span>
+            </div>
+            <div class="book-actions">
+              <button class="action-btn" onclick="viewBook('${book.title}')">View</button>
+              <button class="action-btn" onclick="editBook('${book.title}')">Edit</button>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function animateCounter(element) {
+      const target = parseInt(element.getAttribute('data-target'));
+      const duration = 1500;
+      const step = target / (duration / 16);
+      let current = 0;
+
+      const timer = setInterval(() => {
+        current += step;
+        if (current >= target) {
+          element.textContent = target;
+          clearInterval(timer);
+        } else {
+          element.textContent = Math.floor(current);
+        }
+      }, 16);
+    }
+
+    function initCounters() {
+      const counters = document.querySelectorAll('.stat-number');
+      counters.forEach(counter => animateCounter(counter));
+    }
+
+    function animateCards() {
+      const cards = document.querySelectorAll('.stat-card, .book-card');
+      cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px)';
+        setTimeout(() => {
+          card.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        }, index * 80);
+      });
+    }
+
+    function handleScroll() {
+      const navbar = document.getElementById('navbar');
+      if (window.scrollY > 50) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
+    }
+
     function logout() {
       if (confirm('Are you sure you want to logout?')) {
         window.location.href = '/logout/';
       }
     }
 
-    // Add smooth animations on load
+    function addBook() {
+      alert('Add Book feature coming soon!');
+    }
+
+    function viewBook(title) {
+      alert(`Viewing: ${title}`);
+    }
+
+    function editBook(title) {
+      alert(`Editing: ${title}`);
+    }
+
+    const searchBar = document.getElementById('searchBar');
+    searchBar.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase();
+      const bookCards = document.querySelectorAll('.book-card');
+
+      bookCards.forEach(card => {
+        const title = card.querySelector('.book-title').textContent.toLowerCase();
+        const author = card.querySelector('.book-author').textContent.toLowerCase();
+
+        if (title.includes(query) || author.includes(query)) {
+          card.style.display = 'block';
+          setTimeout(() => {
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+          }, 10);
+        } else {
+          card.style.opacity = '0';
+          card.style.transform = 'translateY(20px)';
+          setTimeout(() => {
+            card.style.display = 'none';
+          }, 300);
+        }
+      });
+    });
+
     document.addEventListener('DOMContentLoaded', () => {
-      const cards = document.querySelectorAll('.stat-card, .feature-card');
-      cards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(20px)';
-        setTimeout(() => {
-          card.style.transition = 'all 0.5s ease-out';
-          card.style.opacity = '1';
-          card.style.transform = 'translateY(0)';
-        }, index * 100);
+      renderBooks();
+      animateCards();
+      initCounters();
+      window.addEventListener('scroll', handleScroll);
+
+      const username = document.getElementById('username');
+      username.addEventListener('click', () => {
+        alert('Profile dropdown coming soon!');
       });
     });
   </script>
