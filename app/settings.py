@@ -63,7 +63,7 @@ WSGI_APPLICATION = 'app.wsgi.application'
 # Database (Supabase PostgreSQL)
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ['DATABASE_URL'],  # uses the session pooler URL set in Render
+        default=DATABASE_URL,
         conn_max_age=600,
         ssl_require=True
     )
