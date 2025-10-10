@@ -7,16 +7,17 @@ from django.contrib.auth.hashers import make_password, check_password
 from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 from django.conf import settings
+import os
 from .models import Credentials
 
 # In-memory tokens (for demo)
 verification_tokens = {}
 password_reset_tokens = {}
 
-# Google OAuth2 Configuration - REPLACE WITH YOUR ACTUAL CREDENTIALS
-GOOGLE_CLIENT_ID = '1098327710097-5mqs9s1linj3rqck41phtl7ibh18u5ra.apps.googleusercontent.com'
-GOOGLE_CLIENT_SECRET = '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'
-GOOGLE_REDIRECT_URI = 'http://127.0.0.1:8000/google-callback/'
+# Google OAuth2 Configuration - Use environment variables
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '1098327710097-5mqs9s1linj3rqck41phtl7ibh18u5ra.apps.googleusercontent.com')
+GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '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')
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://book-nimbus.onrender.com/google-callback/')
 
 
 def index(request):
@@ -191,11 +192,14 @@ def signup_view(request):
                 is_verified=False
             )
 
+            # Get base URL for verification links
+            base_url = 'https://book-nimbus.onrender.com'
+            
             # Verification token
             token = get_random_string(32)
             verification_tokens[token] = user.UserID
 
-            verification_link = f"http://127.0.0.1:8000/verify-email/?token={token}"
+            verification_link = f"{base_url}/verify-email/?token={token}"
             send_mail(
                 'Verify your BookNimbus account',
                 f'Welcome to BookNimbus!\n\nClick the link below to verify your email:\n{verification_link}\n\nThis link will expire in 24 hours.',
@@ -314,9 +318,12 @@ def forgot_password(request):
                     'message': 'This account uses Google authentication. Please sign in with Google.'
                 }, status=400)
 
+            # Get base URL for reset links
+            base_url = 'https://book-nimbus.onrender.com'
+            
             token = get_random_string(32)
             password_reset_tokens[token] = user.UserID
-            reset_link = f"http://127.0.0.1:8000/reset-password-page/?token={token}"
+            reset_link = f"{base_url}/reset-password-page/?token={token}"
 
             send_mail(
                 'Reset your BookNimbus password',
