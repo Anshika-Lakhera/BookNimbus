@@ -8,6 +8,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'your-production-secret-key-change-this')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = ['book-nimbus.onrender.com', 'localhost', '127.0.0.1']
+DATABASE_URL = os.environ.get(
+    'DATABASE_URL',
+    'postgresql://postgres.arwnfwtjpjhegtgdrpmi:1MwqTio7vomkZLdx@aws-1-ap-south-1.pooler.supabase.com:5432/postgres'
+)
 
 # Add these to INSTALLED_APPS
 INSTALLED_APPS = [
