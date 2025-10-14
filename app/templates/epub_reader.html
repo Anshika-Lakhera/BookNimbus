@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EPUB Reader</title>
+<style>
+  :root {
+    --bg-color: #f8f8f8;
+    --text-color: #333;
+    --toolbar-bg: #f0f0f0;
+    --button-bg: #444;
+    --button-hover: #555;
+    --progress-bg: #e0e0e0;
+    --progress-fill: #444;
+    --border-color: #ddd;
+  }
+
+  .dark-mode {
+    --bg-color: #1a1a1a;
+    --text-color: #e6e6e6;
+    --toolbar-bg: #2a2a2a;
+    --button-bg: #555;
+    --button-hover: #666;
+    --progress-bg: #333;
+    --progress-fill: #7a7a7a;
+    --border-color: #444;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    font-family: 'Georgia', serif;
+    background: var(--bg-color);
+    color: var(--text-color);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    transition: background 0.3s, color 0.3s;
+    overflow: hidden;
+  }
+
+  #toolbar {
+    background: var(--toolbar-bg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.8rem 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 10;
+  }
+
+  #book-title {
+    font-weight: bold;
+    font-size: 1.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 40%;
+  }
+
+  #controls {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+
+  button {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background: var(--button-bg);
+    color: white;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  button:hover {
+    background: var(--button-hover);
+  }
+
+  #viewer {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    background: var(--bg-color);
+  }
+
+  #viewer iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  #page-info {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.7);
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    color: white;
+    z-index: 5;
+    transition: opacity 0.3s;
+    opacity: 0;
+  }
+
+  #progress-container {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    width: 30%;
+    justify-content: center;
+  }
+
+  #progress-bar {
+    flex: 1;
+    height: 6px;
+    background: var(--progress-bg);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  #progress-fill {
+    height: 100%;
+    background: var(--progress-fill);
+    width: 0%;
+    transition: width 0.3s;
+  }
+
+  #page-numbers {
+    font-size: 0.85rem;
+    white-space: nowrap;
+    min-width: 80px;
+    text-align: center;
+  }
+
+  #home-btn {
+    background: transparent;
+    color: var(--text-color);
+    padding: 0.5rem;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+  }
+
+  #home-btn:hover {
+    background: rgba(0,0,0,0.1);
+  }
+
+  #font-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: 10px;
+  }
+
+  #font-size-slider {
+    width: 120px;
+  }
+
+  #font-buttons {
+    display: flex;
+    gap: 0.3rem;
+  }
+
+  #font-buttons button {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    font-weight: bold;
+  }
+
+  /* Kindle-like reading area */
+  #reading-area {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
+  }
+
+  #book-content {
+    max-width: 800px;
+    width: 100%;
+    height: 100%;
+    background: var(--bg-color);
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Touch navigation areas */
+  .nav-area {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 25%;
+    z-index: 2;
+    cursor: pointer;
+  }
+
+  #prev-area {
+    left: 0;
+  }
+
+  #next-area {
+    right: 0;
+  }
+
+  /* Loading indicator */
+  #loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1.2rem;
+    z-index: 100;
+  }
+
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    #toolbar {
+      padding: 0.6rem 0.8rem;
+    }
+
+    #book-title {
+      max-width: 30%;
+      font-size: 1rem;
+    }
+
+    #progress-container {
+      width: 40%;
+    }
+
+    button {
+      padding: 0.4rem 0.8rem;
+      font-size: 0.8rem;
+    }
+
+    #font-controls {
+      display: none;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="toolbar">
+  <button id="home-btn" title="Home">🏠</button>
+  <div id="book-title">Loading...</div>
+  <div id="progress-container">
+    <div id="progress-bar">
+      <div id="progress-fill"></div>
+    </div>
+    <div id="page-numbers">0 / 0</div>
+  </div>
+  <div id="controls">
+    <button id="prev" title="Previous Page">←</button>
+    <div id="font-controls">
+      <div id="font-buttons">
+        <button id="font-decrease" title="Decrease Font Size">A-</button>
+        <button id="font-increase" title="Increase Font Size">A+</button>
+      </div>
+      <input type="range" id="font-size-slider" min="14" max="28" value="18">
+    </div>
+    <button id="toggle-theme" title="Toggle Dark Mode">🌙</button>
+    <button id="next" title="Next Page">→</button>
+  </div>
+</div>
+<div id="viewer">
+  <div id="loading">Loading book...</div>
+  <div id="reading-area">
+    <div id="book-content"></div>
+  </div>
+  <div class="nav-area" id="prev-area"></div>
+  <div class="nav-area" id="next-area"></div>
+  <div id="page-info">Page 0 of 0</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/epubjs@0.3.93/dist/epub.min.js"></script>
+<script>
+// Get URL parameters
+const urlParams = new URLSearchParams(window.location.search);
+const epubUrl = decodeURIComponent(urlParams.get('epub_url') || '');
+const bookTitle = epubUrl.split('/').pop().replace('.epub','') || 'Book';
+document.getElementById('book-title').textContent = bookTitle;
+
+// Initialize variables
+let book, rendition;
+let currentLocation = 0;
+let totalLocations = 0;
+let pageInfoTimeout;
+
+// Home button functionality
+document.getElementById('home-btn').addEventListener('click', () => {
+  window.location.href = '/home';
+});
+
+if (!epubUrl) {
+  document.getElementById('loading').textContent = "No EPUB URL provided";
+} else {
+  // Initialize the book
+  book = ePub(epubUrl);
+  rendition = book.renderTo("book-content", {
+    width: "100%",
+    height: "100%",
+    flow: "paginated",
+    spread: "none"
+  });
+
+  // Set initial theme
+  rendition.themes.default({
+    'body': {
+      'color': 'var(--text-color)',
+      'background': 'var(--bg-color)',
+      'font-family': 'Georgia, serif',
+      'line-height': '1.6',
+      'padding': '2rem'
+    },
+    'p': {
+      'margin-bottom': '1rem'
+    }
+  });
+
+  // Generate locations for pagination
+  book.ready.then(() => {
+    return book.locations.generate(1600);
+  }).then(locations => {
+    totalLocations = locations.length;
+    updateProgress();
+    document.getElementById('loading').style.display = 'none';
+  });
+
+  // Display the book
+  rendition.display();
+
+  // Update location and progress when page changes
+  rendition.on('relocated', location => {
+    currentLocation = book.locations.locationFromCfi(location.start.cfi) || 0;
+    updateProgress();
+    showPageInfo();
+  });
+
+  // Navigation controls
+  document.getElementById('prev').addEventListener('click', () => rendition.prev());
+  document.getElementById('next').addEventListener('click', () => rendition.next());
+
+  // Touch navigation
+  document.getElementById('prev-area').addEventListener('click', () => rendition.prev());
+  document.getElementById('next-area').addEventListener('click', () => rendition.next());
+
+  // Font size controls
+  const fontSizeSlider = document.getElementById('font-size-slider');
+  fontSizeSlider.addEventListener('input', e => {
+    const size = e.target.value + 'px';
+    rendition.themes.fontSize(size);
+  });
+
+  document.getElementById('font-decrease').addEventListener('click', () => {
+    let currentSize = parseInt(fontSizeSlider.value);
+    if (currentSize > parseInt(fontSizeSlider.min)) {
+      fontSizeSlider.value = currentSize - 1;
+      rendition.themes.fontSize((currentSize - 1) + 'px');
+    }
+  });
+
+  document.getElementById('font-increase').addEventListener('click', () => {
+    let currentSize = parseInt(fontSizeSlider.value);
+    if (currentSize < parseInt(fontSizeSlider.max)) {
+      fontSizeSlider.value = currentSize + 1;
+      rendition.themes.fontSize((currentSize + 1) + 'px');
+    }
+  });
+
+  // Dark mode toggle
+  const toggleBtn = document.getElementById('toggle-theme');
+  toggleBtn.addEventListener('click', () => {
+    document.body.classList.toggle('dark-mode');
+    if (document.body.classList.contains('dark-mode')) {
+      toggleBtn.textContent = '☀️';
+      toggleBtn.title = 'Light Mode';
+    } else {
+      toggleBtn.textContent = '🌙';
+      toggleBtn.title = 'Dark Mode';
+    }
+
+    // Update theme for the book content
+    rendition.themes.default({
+      'body': {
+        'color': 'var(--text-color)',
+        'background': 'var(--bg-color)',
+        'font-family': 'Georgia, serif',
+        'line-height': '1.6',
+        'padding': '2rem'
+      },
+      'p': {
+        'margin-bottom': '1rem'
+      }
+    });
+  });
+
+  // Update progress bar and page numbers
+  function updateProgress() {
+    const progress = totalLocations > 0 ? (currentLocation / totalLocations) * 100 : 0;
+    document.getElementById('progress-fill').style.width = `${progress}%`;
+    document.getElementById('page-numbers').textContent = `${currentLocation + 1} / ${totalLocations}`;
+  }
+
+  // Show page info temporarily
+  function showPageInfo() {
+    const pageInfo = document.getElementById('page-info');
+    pageInfo.textContent = `Page ${currentLocation + 1} of ${totalLocations}`;
+    pageInfo.style.opacity = '1';
+
+    clearTimeout(pageInfoTimeout);
+    pageInfoTimeout = setTimeout(() => {
+      pageInfo.style.opacity = '0';
+    }, 2000);
+  }
+
+  // Keyboard navigation
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft') {
+      rendition.prev();
+    } else if (e.key === 'ArrowRight') {
+      rendition.next();
+    }
+  });
+}
+</script>
+</body>
+</html>

@@ -8,6 +8,9 @@ from django.core.mail import send_mail
 from django.utils.crypto import get_random_string
 from django.conf import settings
 import os
+
+from django.views.decorators.http import require_http_methods
+
 from .models import Credentials
 
 # In-memory tokens (for demo)
@@ -15,22 +18,200 @@ verification_tokens = {}
 password_reset_tokens = {}
 
 # Google OAuth2 Configuration - Use environment variables
-GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID', '1098327710097-5mqs9s1linj3rqck41phtl7ibh18u5ra.apps.googleusercontent.com')
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID',
+                                  '1098327710097-5mqs9s1linj3rqck41phtl7ibh18u5ra.apps.googleusercontent.com')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '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')
-GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'https://book-nimbus.onrender.com/google-callback/')
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'http://127.0.0.1:8000/google-callback/')
 
 
 def index(request):
     return render(request, 'index.html')
 
+def shelves(request):
+    """Shelves/Store page"""
+    username = request.session.get('username')
+    user_id = request.session.get('user_id')
+
+    if not username:
+        return redirect('index')
+
+    # Ensure user_id is properly set
+    if not user_id:
+        try:
+            user = Credentials.objects.get(UserName=username)
+            user_id = user.UserID
+            request.session['user_id'] = user_id
+        except Credentials.DoesNotExist:
+            return redirect('index')
+
+    # Debug output
+    print(f"DEBUG: Rendering shelves for user_id: {user_id}")
+
+    return render(request, 'shelves.html', {
+        'username': username,
+        'user_id': user_id  # Make sure this is passed
+    })
+
+
+@require_http_methods(["GET"])
+def get_books(request):
+    """Get books from database using Django model"""
+    try:
+        # Import the Books model
+        from .models import Books
+
+        # Get all books using the model
+        books_queryset = Books.get_all_books()
+
+        # Convert to list of dictionaries
+        books_data = [book.to_dict() for book in books_queryset]
+
+        if books_data:
+            return JsonResponse({
+                'success': True,
+                'books': books_data
+            })
+        else:
+            return JsonResponse({
+                'success': True,  # Still success but empty
+                'books': [],
+                'message': 'No books found in database'
+            })
+
+    except Exception as e:
+        print(f"Error fetching books: {e}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+
+def epub_reader(request):
+    """EPUB Reader page"""
+    return render(request, 'epub_reader.html')
 
 def home(request):
     """Home screen after login"""
     username = request.session.get('username')
+    user_id = request.session.get('user_id')
+
     if not username:
         return redirect('index')
-    return render(request, 'home.html', {'username': username})
 
+    # If user_id is not in session, try to get it from the database
+    if not user_id:
+        try:
+            user = Credentials.objects.get(UserName=username)
+            user_id = user.UserID
+            request.session['user_id'] = user_id  # Store it in session for future use
+        except Credentials.DoesNotExist:
+            return redirect('index')
+
+    return render(request, 'home.html', {
+        'username': username,
+        'user_id': user_id
+    })
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def update_reading_status(request):
+    """Update reading status for a book"""
+    try:
+        data = json.loads(request.body)
+        user_id = data.get('user_id')
+        book_id = data.get('book_id')
+        status = data.get('status')
+        book_data = data.get('book_data', {})
+
+        if not all([user_id, book_id, status]):
+            return JsonResponse({'error': 'Missing required fields'}, status=400)
+
+        try:
+            user = Credentials.objects.get(UserID=user_id)
+            user.update_reading_status(book_id, book_data, status)
+
+            return JsonResponse({
+                'success': True,
+                'message': 'Reading status updated successfully',
+                'stats': {
+                    'want_to_read': len(user.Want_To_Read),
+                    'currently_reading': len(user.Currently_Reading),
+                    'read': len(user.Read)
+                }
+            })
+
+        except Credentials.DoesNotExist:
+            return JsonResponse({'error': 'User not found'}, status=404)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@require_http_methods(["GET"])
+def get_reading_status(request, user_id):
+    """Get all reading status for a user"""
+    try:
+        print(f"DEBUG: Getting reading status for user_id: {user_id}")
+
+        user = Credentials.objects.get(UserID=user_id)
+        print(f"DEBUG: User found: {user.UserName}")
+
+        # Initialize None fields to empty dict
+        if user.Read is None:
+            user.Read = {}
+        if user.Currently_Reading is None:
+            user.Currently_Reading = {}
+        if user.Want_To_Read is None:
+            user.Want_To_Read = {}
+
+        reading_status = user.get_reading_status()
+        print(f"DEBUG: Reading status: {reading_status}")
+
+        return JsonResponse({
+            'success': True,
+            'reading_status': reading_status,
+            'stats': {
+                'want_to_read': len(user.Want_To_Read),
+                'currently_reading': len(user.Currently_Reading),
+                'read': len(user.Read)
+            }
+        })
+
+    except Credentials.DoesNotExist:
+        print(f"DEBUG: User {user_id} not found")
+        return JsonResponse({'error': 'User not found'}, status=404)
+    except Exception as e:
+        print(f"DEBUG: Error in get_reading_status: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+@require_http_methods(["GET"])
+def get_user_stats(request, user_id):
+    """Get user reading statistics"""
+    try:
+        user = Credentials.objects.get(UserID=user_id)
+
+        # Initialize None fields to empty dict
+        if user.Read is None:
+            user.Read = {}
+        if user.Currently_Reading is None:
+            user.Currently_Reading = {}
+        if user.Want_To_Read is None:
+            user.Want_To_Read = {}
+
+        return JsonResponse({
+            'success': True,
+            'stats': {
+                'want_to_read': len(user.Want_To_Read),
+                'currently_reading': len(user.Currently_Reading),
+                'read': len(user.Read)
+            }
+        })
+
+    except Credentials.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
 def google_auth_init(request):
@@ -131,12 +312,15 @@ def google_callback(request):
                     UserName=username,
                     Email=email,
                     google_id=google_id,
-                    is_verified=True
+                    is_verified=True,
+                    Read={},
+                    Currently_Reading={},
+                    Want_To_Read={}
                 )
 
-        # Store in session
+        # Store in session - MAKE SURE TO INCLUDE USER_ID
         request.session['username'] = user.UserName
-        request.session['user_id'] = user.UserID
+        request.session['user_id'] = user.UserID  # This line is crucial
         request.session['is_google_user'] = True
 
         return render(request, 'auth_result.html', {
@@ -189,12 +373,15 @@ def signup_view(request):
                 UserName=username,
                 Password=hashed_password,
                 Email=email,
-                is_verified=False
+                is_verified=False,
+                Read={},
+                Currently_Reading={},
+                Want_To_Read={}
             )
 
             # Get base URL for verification links
             base_url = 'https://book-nimbus.onrender.com'
-            
+
             # Verification token
             token = get_random_string(32)
             verification_tokens[token] = user.UserID
@@ -279,9 +466,9 @@ def login_view(request):
                     'message': 'Please verify your email before logging in'
                 }, status=401)
 
-            # Store username in session
+            # Store user info in session - MAKE SURE TO INCLUDE USER_ID
             request.session['username'] = username
-            request.session['user_id'] = user.UserID
+            request.session['user_id'] = user.UserID  # This line is crucial
             request.session['is_google_user'] = False
 
             return JsonResponse({
@@ -320,7 +507,7 @@ def forgot_password(request):
 
             # Get base URL for reset links
             base_url = 'https://book-nimbus.onrender.com'
-            
+
             token = get_random_string(32)
             password_reset_tokens[token] = user.UserID
             reset_link = f"{base_url}/reset-password-page/?token={token}"

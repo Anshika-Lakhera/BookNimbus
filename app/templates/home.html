@@ -40,6 +40,17 @@
       --radius-xl: 28px;
     }
 
+    [data-theme="light"] {
+      --primary-gradient: linear-gradient(135deg, #a8c0ff 0%, #3f2b96 100%);
+      --card-bg: rgba(255, 255, 255, 0.9);
+      --card-hover: rgba(255, 255, 255, 0.95);
+      --glass-bg: rgba(255, 255, 255, 0.8);
+      --border-color: rgba(0, 0, 0, 0.1);
+      --shadow-sm: 0 4px 15px rgba(0, 0, 0, 0.1);
+      --shadow-md: 0 8px 30px rgba(0, 0, 0, 0.15);
+      --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.2);
+    }
+
     html {
       scroll-behavior: smooth;
     }
@@ -50,6 +61,11 @@
       color: #fff;
       position: relative;
       overflow-x: hidden;
+      transition: background 0.5s ease;
+    }
+
+    body[data-theme="light"] {
+      color: #333;
     }
 
     body::before {
@@ -64,6 +80,10 @@
       animation: float 20s linear infinite;
       pointer-events: none;
       z-index: 0;
+    }
+
+    body[data-theme="light"]::before {
+      background: radial-gradient(circle, rgba(0,0,0,0.05) 1px, transparent 1px);
     }
 
     @keyframes float {
@@ -108,6 +128,18 @@
       background: rgba(255, 255, 255, 0.3);
     }
 
+    body[data-theme="light"]::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    body[data-theme="light"]::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    body[data-theme="light"]::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
+
     .navbar {
       background: var(--glass-bg);
       backdrop-filter: blur(20px);
@@ -124,6 +156,10 @@
     .navbar.scrolled {
       background: rgba(255, 255, 255, 0.12);
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    body[data-theme="light"] .navbar.scrolled {
+      background: rgba(255, 255, 255, 0.95);
     }
 
     .nav-container {
@@ -168,69 +204,19 @@
       letter-spacing: -0.5px;
     }
 
-    .search-container {
-      flex: 1;
-      max-width: 600px;
-      position: relative;
-    }
-
-    .search-wrapper {
-      position: relative;
-    }
-
-    .search-bar {
-      width: 100%;
-      padding: 14px 140px 14px 50px;
-      background: rgba(255, 255, 255, 0.12);
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      border-radius: 30px;
-      color: #fff;
-      font-size: 15px;
-      outline: none;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .search-bar::placeholder {
-      color: rgba(255, 255, 255, 0.6);
-    }
-
-    .search-bar:focus {
-      background: rgba(255, 255, 255, 0.18);
-      border-color: rgba(255, 255, 255, 0.4);
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-      transform: translateY(-2px);
-      padding-right: 140px;
-    }
-
-    .search-icon {
-      position: absolute;
-      left: 18px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 18px;
-      opacity: 0.7;
-      pointer-events: none;
-    }
-
-    .ai-badge {
-      position: absolute;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-      letter-spacing: 0.5px;
-      box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
-      animation: pulse 2s infinite;
+    body[data-theme="light"] .logo-text {
+      color: #333;
     }
 
     .nav-right {
       display: flex;
       align-items: center;
       gap: var(--spacing-sm);
+      position: relative;
+    }
+
+    .profile-container {
+      position: relative;
     }
 
     .username {
@@ -243,12 +229,108 @@
       transition: all 0.3s ease;
       cursor: pointer;
       position: relative;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    body[data-theme="light"] .username {
+      background: rgba(0, 0, 0, 0.05);
+      color: #333;
     }
 
     .username:hover {
       background: rgba(255, 255, 255, 0.18);
       transform: translateY(-2px);
       box-shadow: var(--shadow-sm);
+    }
+
+    body[data-theme="light"] .username:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    .profile-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 8px;
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      padding: var(--spacing-sm);
+      min-width: 200px;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-10px);
+      transition: all 0.3s ease;
+    }
+
+    .profile-dropdown.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: inherit;
+    }
+
+    .dropdown-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    body[data-theme="light"] .dropdown-item:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 50px;
+      height: 24px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    body[data-theme="light"] .toggle-switch {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      transition: all 0.3s ease;
+    }
+
+    body[data-theme="light"] .toggle-switch::after {
+      background: #333;
+      transform: translateX(26px);
     }
 
     .logout-btn {
@@ -300,11 +382,22 @@
       line-height: 1.2;
     }
 
+    body[data-theme="light"] .welcome h1 {
+      background: linear-gradient(135deg, #333 0%, rgba(51, 51, 51, 0.8) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
     .welcome p {
       font-size: 22px;
       opacity: 0.9;
       font-weight: 300;
       letter-spacing: 0.5px;
+    }
+
+    body[data-theme="light"] .welcome p {
+      color: #555;
     }
 
     .stats {
@@ -350,6 +443,10 @@
       border-color: rgba(255, 255, 255, 0.3);
     }
 
+    body[data-theme="light"] .stat-card:hover {
+      border-color: rgba(0, 0, 0, 0.2);
+    }
+
     .stat-icon {
       font-size: 56px;
       margin-bottom: var(--spacing-md);
@@ -380,6 +477,10 @@
       letter-spacing: 0.3px;
     }
 
+    body[data-theme="light"] .stat-label {
+      color: #555;
+    }
+
     .section-header {
       margin-bottom: var(--spacing-lg);
       animation: slideIn 0.8s ease;
@@ -397,154 +498,8 @@
       font-weight: 300;
     }
 
-    .book-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: var(--spacing-md);
-      margin-bottom: 60px;
-    }
-
-    .book-card {
-      background: var(--card-bg);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-radius: var(--radius-lg);
-      overflow: hidden;
-      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      border: 1px solid var(--border-color);
-      cursor: pointer;
-      position: relative;
-    }
-
-    .book-card::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.1) 100%);
-      opacity: 0;
-      transition: opacity 0.4s ease;
-      pointer-events: none;
-    }
-
-    .book-card:hover::after {
-      opacity: 1;
-    }
-
-    .book-card:hover {
-      transform: translateY(-15px) scale(1.03);
-      box-shadow: var(--shadow-lg);
-      border-color: rgba(255, 255, 255, 0.3);
-    }
-
-    .book-cover {
-      width: 100%;
-      height: 380px;
-      object-fit: cover;
-      transition: transform 0.4s ease;
-    }
-
-    .book-card:hover .book-cover {
-      transform: scale(1.05);
-    }
-
-    .book-badge {
-      position: absolute;
-      top: 16px;
-      right: 16px;
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    }
-
-    .badge-popular {
-      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    }
-
-    .badge-new {
-      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    }
-
-    .badge-trending {
-      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    }
-
-    .book-info {
-      padding: var(--spacing-md);
-    }
-
-    .book-title {
-      font-size: 18px;
-      font-weight: 600;
-      margin-bottom: var(--spacing-xs);
-      line-height: 1.4;
-      display: -webkit-box;
-      -webkit-line-clamp: 2;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-    }
-
-    .book-author {
-      font-size: 14px;
-      opacity: 0.8;
-      margin-bottom: var(--spacing-sm);
-      font-weight: 400;
-    }
-
-    .book-rating {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-xs);
-      margin-bottom: var(--spacing-sm);
-    }
-
-    .stars {
-      color: #ffd700;
-      font-size: 16px;
-    }
-
-    .rating-text {
-      font-size: 14px;
-      opacity: 0.9;
-      font-weight: 500;
-    }
-
-    .book-actions {
-      display: flex;
-      gap: var(--spacing-xs);
-      margin-top: var(--spacing-sm);
-    }
-
-    .action-btn {
-      flex: 1;
-      padding: 10px;
-      background: rgba(255, 255, 255, 0.15);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: var(--radius-sm);
-      color: #fff;
-      font-size: 13px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      text-align: center;
-    }
-
-    .action-btn:hover {
-      background: rgba(255, 255, 255, 0.25);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    }
-
-    .action-btn:active {
-      transform: translateY(0);
+    body[data-theme="light"] .section-header p {
+      color: #555;
     }
 
     .cta-section {
@@ -596,6 +551,10 @@
       font-weight: 300;
     }
 
+    body[data-theme="light"] .cta-section p {
+      color: #555;
+    }
+
     .cta-btn {
       padding: 18px 45px;
       background: #fff;
@@ -611,10 +570,19 @@
       z-index: 1;
     }
 
+    body[data-theme="light"] .cta-btn {
+      background: #764ba2;
+      color: #fff;
+    }
+
     .cta-btn:hover {
       transform: translateY(-5px) scale(1.05);
       box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4);
       background: linear-gradient(135deg, #fff 0%, #f8f8f8 100%);
+    }
+
+    body[data-theme="light"] .cta-btn:hover {
+      background: linear-gradient(135deg, #764ba2 0%, #5a3a7e 100%);
     }
 
     .cta-btn:active {
@@ -649,12 +617,6 @@
 
       .nav-container {
         flex-wrap: wrap;
-      }
-
-      .search-container {
-        order: 3;
-        flex: 1 1 100%;
-        max-width: 100%;
       }
 
       .logo-icon {
@@ -709,7 +671,7 @@
     }
   </style>
 </head>
-<body>
+<body data-theme="dark">
   <nav class="navbar" id="navbar">
     <div class="nav-container">
       <div class="logo-container">
@@ -717,16 +679,29 @@
         <div class="logo-text">BookNimbus</div>
       </div>
 
-      <div class="search-container">
-        <div class="search-wrapper">
-          <span class="search-icon">🔍</span>
-          <input type="text" class="search-bar" placeholder="Search your library..." id="searchBar">
-          <div class="ai-badge">AI SEARCH SOON!</div>
-        </div>
-      </div>
-
       <div class="nav-right">
-        <div class="username" id="username">👤 {{ username }}</div>
+        <div class="profile-container">
+          <div class="username" id="username">
+            <span>👤</span>
+            <span>{{ username }}</span>
+            <span>▼</span>
+          </div>
+          <div class="profile-dropdown" id="profileDropdown">
+            <div class="dropdown-item" onclick="viewProfile()">
+              <span>👤</span>
+              <span>View Profile</span>
+            </div>
+            <div class="dropdown-item theme-toggle">
+              <span>🌙</span>
+              <span>Dark Mode</span>
+              <div class="toggle-switch" id="themeToggle"></div>
+            </div>
+            <div class="dropdown-item" onclick="goToStore()">
+              <span>📚</span>
+              <span>Go to Store</span>
+            </div>
+          </div>
+        </div>
         <button class="logout-btn" onclick="logout()">Logout</button>
       </div>
     </div>
@@ -739,119 +714,83 @@
     </div>
 
     <div class="stats">
-      <div class="stat-card">
-        <div class="stat-icon">📚</div>
-        <div class="stat-number" data-target="12">0</div>
-        <div class="stat-label">Books in Library</div>
-      </div>
-      <div class="stat-card">
+      <div class="stat-card" onclick="goToStore('want-to-read')">
         <div class="stat-icon">📖</div>
-        <div class="stat-number" data-target="3">0</div>
+        <div class="stat-number" id="wantToReadCount" data-target="0">0</div>
+        <div class="stat-label">Want to Read</div>
+      </div>
+      <div class="stat-card" onclick="goToStore('currently-reading')">
+        <div class="stat-icon">📚</div>
+        <div class="stat-number" id="currentlyReadingCount" data-target="0">0</div>
         <div class="stat-label">Currently Reading</div>
       </div>
-      <div class="stat-card">
+      <div class="stat-card" onclick="goToStore('read')">
         <div class="stat-icon">✅</div>
-        <div class="stat-number" data-target="8">0</div>
-        <div class="stat-label">Completed</div>
+        <div class="stat-number" id="readCount" data-target="0">0</div>
+        <div class="stat-label">Read</div>
       </div>
     </div>
 
     <div class="section-header">
-      <h2>Your Library</h2>
-      <p>Recent additions and ongoing reads</p>
-    </div>
-
-    <div class="book-grid" id="bookGrid">
+      <h2>Quick Access</h2>
+      <p>Navigate to different sections of your library</p>
     </div>
 
     <div class="cta-section">
       <h2>Discover Your Next Favorite Book</h2>
       <p>Explore new worlds, ideas, and stories that inspire you</p>
-      <button class="cta-btn" onclick="addBook()">Add New Book</button>
+      <button class="cta-btn" onclick="goToStore()">Go to Book Store</button>
     </div>
   </div>
 
   <script>
-    const books = [
-      {
-        title: "The Midnight Library",
-        author: "Matt Haig",
-        rating: 4.5,
-        cover: "https://picsum.photos/seed/book1/400/600",
-        badge: "popular"
-      },
-      {
-        title: "Atomic Habits",
-        author: "James Clear",
-        rating: 4.8,
-        cover: "https://picsum.photos/seed/book2/400/600",
-        badge: "trending"
-      },
-      {
-        title: "Project Hail Mary",
-        author: "Andy Weir",
-        rating: 4.7,
-        cover: "https://picsum.photos/seed/book3/400/600",
-        badge: "new"
-      },
-      {
-        title: "The Thursday Murder Club",
-        author: "Richard Osman",
-        rating: 4.4,
-        cover: "https://picsum.photos/seed/book4/400/600",
-        badge: "popular"
-      },
-      {
-        title: "Educated",
-        author: "Tara Westover",
-        rating: 4.6,
-        cover: "https://picsum.photos/seed/book5/400/600",
-        badge: "trending"
-      },
-      {
-        title: "The Silent Patient",
-        author: "Alex Michaelides",
-        rating: 4.3,
-        cover: "https://picsum.photos/seed/book6/400/600",
-        badge: "new"
+    const CURRENT_USER_ID = "{{ user_id|default:'0' }}";
+    const CURRENT_USER_ID_NUM = Number(CURRENT_USER_ID);
+    console.log("User ID:", CURRENT_USER_ID); // Debug line
+    // Get the current user ID from Django template
+
+    // Theme management
+    function toggleTheme() {
+      const body = document.body;
+      const currentTheme = body.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+      body.setAttribute('data-theme', newTheme);
+      localStorage.setItem('theme', newTheme);
+
+      // Update toggle switch position
+      const toggleSwitch = document.getElementById('themeToggle');
+      if (newTheme === 'light') {
+        toggleSwitch.style.setProperty('--toggle-position', '26px');
+      } else {
+        toggleSwitch.style.setProperty('--toggle-position', '2px');
       }
-    ];
-
-    function getBadgeClass(badge) {
-      return `badge-${badge}`;
     }
 
-    function getBadgeText(badge) {
-      const badges = {
-        popular: 'Popular',
-        new: 'New',
-        trending: 'Trending'
-      };
-      return badges[badge] || badge;
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'dark';
+      document.body.setAttribute('data-theme', savedTheme);
+
+      const toggleSwitch = document.getElementById('themeToggle');
+      if (savedTheme === 'light') {
+        toggleSwitch.style.setProperty('--toggle-position', '26px');
+      } else {
+        toggleSwitch.style.setProperty('--toggle-position', '2px');
+      }
     }
 
-    function renderBooks() {
-      const grid = document.getElementById('bookGrid');
-      grid.innerHTML = books.map((book, index) => `
-        <div class="book-card" style="animation-delay: ${index * 0.1}s;">
-          <img src="${book.cover}" alt="${book.title}" class="book-cover">
-          <div class="book-badge ${getBadgeClass(book.badge)}">${getBadgeText(book.badge)}</div>
-          <div class="book-info">
-            <div class="book-title">${book.title}</div>
-            <div class="book-author">by ${book.author}</div>
-            <div class="book-rating">
-              <span class="stars">★★★★★</span>
-              <span class="rating-text">${book.rating}</span>
-            </div>
-            <div class="book-actions">
-              <button class="action-btn" onclick="viewBook('${book.title}')">View</button>
-              <button class="action-btn" onclick="editBook('${book.title}')">Edit</button>
-            </div>
-          </div>
-        </div>
-      `).join('');
+    // Profile dropdown
+    function toggleProfileDropdown() {
+      const dropdown = document.getElementById('profileDropdown');
+      dropdown.classList.toggle('active');
     }
 
+    function closeProfileDropdown() {
+      const dropdown = document.getElementById('profileDropdown');
+      dropdown.classList.remove('active');
+    }
+
+    // Stats counter animation
     function animateCounter(element) {
       const target = parseInt(element.getAttribute('data-target'));
       const duration = 1500;
@@ -869,24 +808,53 @@
       }, 16);
     }
 
+    // Load user stats from cloud
+    async function loadUserStats() {
+      try {
+        const response = await fetch(`/api/user-stats/${CURRENT_USER_ID}/`);
+        const data = await response.json();
+
+        if (data.success) {
+          // Update the stats with real data from cloud
+          document.getElementById('wantToReadCount').textContent = data.stats.want_to_read;
+          document.getElementById('currentlyReadingCount').textContent = data.stats.currently_reading;
+          document.getElementById('readCount').textContent = data.stats.read;
+
+          // Also update the data-target attributes for animation
+          document.getElementById('wantToReadCount').setAttribute('data-target', data.stats.want_to_read);
+          document.getElementById('currentlyReadingCount').setAttribute('data-target', data.stats.currently_reading);
+          document.getElementById('readCount').setAttribute('data-target', data.stats.read);
+
+          // Animate the counters
+          const counters = document.querySelectorAll('.stat-number');
+          counters.forEach(counter => animateCounter(counter));
+        }
+      } catch (error) {
+        console.error('Error loading stats:', error);
+      }
+    }
+
     function initCounters() {
-      const counters = document.querySelectorAll('.stat-number');
-      counters.forEach(counter => animateCounter(counter));
+      loadUserStats();
     }
 
-    function animateCards() {
-      const cards = document.querySelectorAll('.stat-card, .book-card');
-      cards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(30px)';
-        setTimeout(() => {
-          card.style.transition = 'all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-          card.style.opacity = '1';
-          card.style.transform = 'translateY(0)';
-        }, index * 80);
-      });
+    // Navigation functions
+    function goToStore(section = null) {
+      window.location.href = "/shelves";
     }
 
+    function viewProfile() {
+      alert('Profile page coming soon!');
+      closeProfileDropdown();
+    }
+
+    function logout() {
+      if (confirm('Are you sure you want to logout?')) {
+        window.location.href = '/logout/';
+      }
+    }
+
+    // Scroll handling for navbar
     function handleScroll() {
       const navbar = document.getElementById('navbar');
       if (window.scrollY > 50) {
@@ -896,58 +864,46 @@
       }
     }
 
-    function logout() {
-      if (confirm('Are you sure you want to logout?')) {
-        window.location.href = '/logout/';
-      }
-    }
-
-    function addBook() {
-      alert('Add Book feature coming soon!');
-    }
-
-    function viewBook(title) {
-      alert(`Viewing: ${title}`);
-    }
-
-    function editBook(title) {
-      alert(`Editing: ${title}`);
-    }
-
-    const searchBar = document.getElementById('searchBar');
-    searchBar.addEventListener('input', (e) => {
-      const query = e.target.value.toLowerCase();
-      const bookCards = document.querySelectorAll('.book-card');
-
-      bookCards.forEach(card => {
-        const title = card.querySelector('.book-title').textContent.toLowerCase();
-        const author = card.querySelector('.book-author').textContent.toLowerCase();
-
-        if (title.includes(query) || author.includes(query)) {
-          card.style.display = 'block';
-          setTimeout(() => {
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-          }, 10);
-        } else {
-          card.style.opacity = '0';
-          card.style.transform = 'translateY(20px)';
-          setTimeout(() => {
-            card.style.display = 'none';
-          }, 300);
+    // Get CSRF token for Django
+    function getCSRFToken() {
+      const name = 'csrftoken';
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
         }
-      });
-    });
+      }
+      return cookieValue;
+    }
 
+    // Initialize the page
     document.addEventListener('DOMContentLoaded', () => {
-      renderBooks();
-      animateCards();
+      // Set username
+      document.getElementById('username').querySelector('span:nth-child(2)').textContent = "{{ username }}";
+
+      // Initialize theme
+      initTheme();
+
+      // Initialize counters
       initCounters();
+
+      // Add event listeners
       window.addEventListener('scroll', handleScroll);
 
-      const username = document.getElementById('username');
-      username.addEventListener('click', () => {
-        alert('Profile dropdown coming soon!');
+      // Profile dropdown events
+      document.getElementById('username').addEventListener('click', toggleProfileDropdown);
+      document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+      // Close dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.profile-container')) {
+          closeProfileDropdown();
+        }
       });
     });
   </script>

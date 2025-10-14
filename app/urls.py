@@ -6,6 +6,7 @@ from . import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('shelves/', views.shelves, name='shelves'),
     path('', views.index, name='index'),
     path('home/', views.home, name='home'),
     path('login/', views.login_view, name='login'),
@@ -15,6 +16,15 @@ urlpatterns = [
     path('reset-password-page/', views.reset_password_page, name='reset_password_page'),
     path('reset-password/', views.reset_password, name='reset_password'),
     path('logout/', views.logout_view, name='logout'),
+
+    # API endpoints for reading status
+    path('api/update-reading-status/', views.update_reading_status, name='update_reading_status'),
+    path('api/reading-status/<int:user_id>/', views.get_reading_status, name='get_reading_status'),
+    path('api/user-stats/<int:user_id>/', views.get_user_stats, name='get_user_stats'),
+
+    # Books API endpoint - ADD THIS LINE
+    path('api/books/', views.get_books, name='get_books'),
+    path('epub-reader/', views.epub_reader, name='epub_reader'),
 
     # Google OAuth URLs
     path('google-auth/', views.google_auth_init, name='google_auth'),
