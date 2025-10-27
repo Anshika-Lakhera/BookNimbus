@@ -10,6 +10,8 @@ class Credentials(models.Model):
     Email = models.EmailField(max_length=255, unique=True)
     Password = models.CharField(max_length=255, blank=True, null=True)
     is_verified = models.BooleanField(default=False)
+    is_author = models.BooleanField(default=False)
+    author_completed = models.BooleanField(default=False)  # NEW FIELD
     google_id = models.CharField(max_length=255, blank=True, null=True, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     Read = models.JSONField(default=dict, blank=True)
@@ -67,6 +69,8 @@ class Credentials(models.Model):
             Email=email,
             google_id=google_id,
             is_verified=True,
+            is_author=False,
+            author_completed=False,  # NEW
             Read={},
             Currently_Reading={},
             Want_To_Read={}
@@ -82,11 +86,11 @@ class Books(models.Model):
     genre = models.CharField(max_length=200)
     year = models.IntegerField()
     coverurl = models.URLField(max_length=1000, blank=True, null=True)
-    epub_url = models.URLField(max_length=1000, blank=True, null=True)  # Add this line
+    epub_url = models.URLField(max_length=1000, blank=True, null=True)
 
     class Meta:
         db_table = 'Books'
-        managed = False  # This tells Django not to manage the table
+        managed = False
 
     def __str__(self):
         return f"{self.title} by {self.author}"
@@ -100,7 +104,7 @@ class Books(models.Model):
             'Genre': self.genre,
             'Year': self.year,
             'CoverURL': self.coverurl,
-            'EpubURL': self.epub_url  # Make sure this is included
+            'EpubURL': self.epub_url
         }
 
     @classmethod
@@ -110,4 +114,13 @@ class Books(models.Model):
             return cls.objects.all().order_by('title')
         except Exception as e:
             print(f"Error in get_all_books: {e}")
+            return cls.objects.none()
+
+    @classmethod
+    def get_books_by_author(cls, author_name):
+        """Get books by specific author"""
+        try:
+            return cls.objects.filter(author=author_name).order_by('title')
+        except Exception as e:
+            print(f"Error in get_books_by_author: {e}")
             return cls.objects.none()

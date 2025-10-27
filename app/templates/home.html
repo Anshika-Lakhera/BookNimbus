@@ -215,6 +215,26 @@
       position: relative;
     }
 
+    .post-btn {
+      background: linear-gradient(90deg, #7b2ff7, #f107a3);
+      border: none;
+      border-radius: 25px;
+      padding: 0.6rem 1.2rem;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 15px rgba(123,47,247,0.4);
+    }
+
+    .post-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(123,47,247,0.6);
+    }
+
     .profile-container {
       position: relative;
     }
@@ -502,6 +522,45 @@
       color: #555;
     }
 
+    /* Author Section Styles */
+    .author-section {
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 2rem;
+      border-radius: var(--radius-lg);
+      margin: 2rem 0;
+      border: 1px solid var(--border-color);
+      animation: slideIn 0.8s ease;
+    }
+
+    .author-card {
+      background: var(--card-hover);
+      padding: 1.5rem;
+      border-radius: var(--radius-md);
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 1px solid var(--border-color);
+    }
+
+    .author-card:hover {
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-lg);
+      background: var(--card-bg);
+    }
+
+    .author-card h3 {
+      margin-bottom: 0.5rem;
+      font-size: 1.2rem;
+    }
+
+    .author-card p {
+      opacity: 0.8;
+      font-size: 0.9rem;
+      margin-bottom: 0;
+    }
+
     .cta-section {
       text-align: center;
       margin-top: 80px;
@@ -643,6 +702,15 @@
       .section-header h2 {
         font-size: 28px;
       }
+
+      .author-section {
+        padding: 1.5rem;
+      }
+
+      .post-btn {
+        padding: 0.5rem 1rem;
+        font-size: 14px;
+      }
     }
 
     @media (max-width: 480px) {
@@ -656,6 +724,10 @@
 
       .stat-number {
         font-size: 36px;
+      }
+
+      .post-btn {
+        display: none;
       }
     }
 
@@ -674,12 +746,19 @@
 <body data-theme="dark">
   <nav class="navbar" id="navbar">
     <div class="nav-container">
-      <div class="logo-container">
+      <div class="logo-container" onclick="goToHome()">
         <img src="../static/nimbus.ico" alt="BookNimbus" class="logo-icon" height="542" width="542">
         <div class="logo-text">BookNimbus</div>
       </div>
 
       <div class="nav-right">
+        {% if is_author and author_completed %}
+        <button class="post-btn" onclick="createPost()">
+          <span></span>
+          <span>Post</span>
+        </button>
+        {% endif %}
+
         <div class="profile-container">
           <div class="username" id="username">
             <span>👤</span>
@@ -731,10 +810,28 @@
       </div>
     </div>
 
-    <div class="section-header">
-      <h2>Quick Access</h2>
-      <p>Navigate to different sections of your library</p>
+    {% if is_author and author_completed %}
+<div class="author-section">
+  <div class="section-header">
+<h2 style="text-align: center;">📝 Author Dashboard</h2>
+<p style="text-align: center;">Create and manage your content</p>
+
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+    <div class="author-card" onclick="createPost()">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">✍️</div>
+      <h3>Create New Post</h3>
+      <p>Share your book with readers</p>
     </div>
+    <div class="author-card" onclick="manageBooks()">
+      <div style="font-size: 3rem; margin-bottom: 1rem;">📚</div>
+      <h3>Manage Books</h3>
+      <p>View all your publications</p>
+    </div>
+  </div>
+</div>
+
+    {% endif %}
 
     <div class="cta-section">
       <h2>Discover Your Next Favorite Book</h2>
@@ -746,8 +843,12 @@
   <script>
     const CURRENT_USER_ID = "{{ user_id|default:'0' }}";
     const CURRENT_USER_ID_NUM = Number(CURRENT_USER_ID);
-    console.log("User ID:", CURRENT_USER_ID); // Debug line
-    // Get the current user ID from Django template
+    const IS_AUTHOR = {{ is_author|default:'false'|lower }};
+    const AUTHOR_COMPLETED = {{ author_completed|default:'false'|lower }};
+
+    console.log("User ID:", CURRENT_USER_ID);
+    console.log("Is Author:", IS_AUTHOR);
+    console.log("Author Completed:", AUTHOR_COMPLETED);
 
     // Theme management
     function toggleTheme() {
@@ -838,13 +939,36 @@
       loadUserStats();
     }
 
+    // Author functions
+    function createPost() {
+      window.location.href = "/create-post/";
+    }
+
+    function viewAuthorStats() {
+      alert('Author analytics dashboard coming soon! Track your readers and engagement.');
+    }
+
+    function manageBooks() {
+      // Redirect to author's books page
+      window.location.href = `/author-books/?author=${encodeURIComponent("{{ username }}")}`;
+    }
+
     // Navigation functions
     function goToStore(section = null) {
-      window.location.href = "/shelves";
+      let url = "/shelves/";
+      if (section) {
+        url += `?section=${section}`;
+      }
+      window.location.href = url;
     }
 
     function viewProfile() {
-      alert('Profile page coming soon!');
+      // Redirect to user's author page if they are author, otherwise show profile
+      if (IS_AUTHOR && AUTHOR_COMPLETED) {
+        window.location.href = `/author-books/?author=${encodeURIComponent("{{ username }}")}`;
+      } else {
+        alert('Profile page coming soon!');
+      }
       closeProfileDropdown();
     }
 

@@ -76,6 +76,21 @@
 
     .success-icon { color: #2ed573; }
     .error-icon { color: #ff4757; }
+
+    .spinner {
+      border: 4px solid rgba(102, 126, 234, 0.3);
+      border-radius: 50%;
+      border-top: 4px solid #667eea;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -84,7 +99,13 @@
       <div class="icon success-icon">✅</div>
       <h1>Email Verified!</h1>
       <p>{{ message }}</p>
-      <a href="/" class="btn">Login Now</a>
+      <div class="spinner"></div>
+      <p>Redirecting...</p>
+      <script>
+        setTimeout(() => {
+          window.location.href = "{{ redirect_url }}";
+        }, 2000);
+      </script>
     {% else %}
       <div class="icon error-icon">❌</div>
       <h1>Verification Failed</h1>

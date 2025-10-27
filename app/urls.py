@@ -16,13 +16,16 @@ urlpatterns = [
     path('reset-password-page/', views.reset_password_page, name='reset_password_page'),
     path('reset-password/', views.reset_password, name='reset_password'),
     path('logout/', views.logout_view, name='logout'),
+    path('author-create/', views.author_create, name='author_create'),
+    path('author-books/', views.author_books, name='author_books'),  # NEW
+    path('create-post/', views.create_post, name='create_post'),     # NEW
 
     # API endpoints for reading status
     path('api/update-reading-status/', views.update_reading_status, name='update_reading_status'),
     path('api/reading-status/<int:user_id>/', views.get_reading_status, name='get_reading_status'),
     path('api/user-stats/<int:user_id>/', views.get_user_stats, name='get_user_stats'),
 
-    # Books API endpoint - ADD THIS LINE
+    # Books API endpoint
     path('api/books/', views.get_books, name='get_books'),
     path('epub-reader/', views.epub_reader, name='epub_reader'),
 
@@ -34,3 +37,4 @@ urlpatterns = [
 # Serve static files in development
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

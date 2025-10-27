@@ -71,35 +71,36 @@
       box-shadow: var(--shadow-sm);
       border-bottom: 1px solid var(--border-color);
     }
+
     /* Read EPUB Button */
-.read-epub-btn {
-  background: linear-gradient(90deg, #667eea, #764ba2);
-  border: none;
-  border-radius: 8px;
-  padding: 0.6rem;
-  color: #fff;
-  font-size: 0.8rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  text-align: center;
-  margin-top: 0.5rem;
-  width: 100%;
-}
+    .read-epub-btn {
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      border: none;
+      border-radius: 8px;
+      padding: 0.6rem;
+      color: #fff;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-align: center;
+      margin-top: 0.5rem;
+      width: 100%;
+    }
 
-.read-epub-btn:hover {
-  background: linear-gradient(90deg, #764ba2, #667eea);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102,126,234,0.4);
-}
+    .read-epub-btn:hover {
+      background: linear-gradient(90deg, #764ba2, #667eea);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102,126,234,0.4);
+    }
 
-.read-epub-btn:disabled {
-  background: #666;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-  opacity: 0.6;
-}
+    .read-epub-btn:disabled {
+      background: #666;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+      opacity: 0.6;
+    }
 
     .nav-container {
       width: 100%;
@@ -140,6 +141,26 @@
     body[data-theme="light"] .logo-text {
       color: #333;
       text-shadow: 0 0 12px rgba(0,0,0,0.1);
+    }
+
+    .post-btn {
+      background: linear-gradient(90deg, #7b2ff7, #f107a3);
+      border: none;
+      border-radius: 25px;
+      padding: 0.6rem 1.2rem;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 15px rgba(123,47,247,0.4);
+    }
+
+    .post-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(123,47,247,0.6);
     }
 
     /* === Search Bar === */
@@ -472,6 +493,25 @@
       color: #666;
     }
 
+    .author-link {
+      color: #bdb4ff;
+      cursor: pointer;
+      text-decoration: underline;
+      transition: color 0.3s ease;
+    }
+
+    .author-link:hover {
+      color: #fff;
+    }
+
+    body[data-theme="light"] .author-link {
+      color: #666;
+    }
+
+    body[data-theme="light"] .author-link:hover {
+      color: #333;
+    }
+
     .book-year {
       font-size: 0.75rem;
       color: rgba(255,255,255,0.6);
@@ -782,6 +822,13 @@
       </div>
 
       <div class="nav-right">
+        {% if is_author and author_completed %}
+        <button class="post-btn" onclick="createPost()">
+          <span>📝</span>
+          <span>Post</span>
+        </button>
+        {% endif %}
+
         <div class="profile-container">
           <div class="username" id="username">
             <span>👤</span>
@@ -846,7 +893,12 @@
 <script>
   const CURRENT_USER_ID = "{{ user_id|default:'0' }}";
   const CURRENT_USER_ID_NUM = Number(CURRENT_USER_ID);
-  console.log("User ID:", CURRENT_USER_ID); // Debug line
+  const IS_AUTHOR = {{ is_author|default:'false'|lower }};
+  const AUTHOR_COMPLETED = {{ author_completed|default:'false'|lower }};
+
+  console.log("User ID:", CURRENT_USER_ID);
+  console.log("Is Author:", IS_AUTHOR);
+  console.log("Author Completed:", AUTHOR_COMPLETED);
 
   // Book data and state management
   let allBooks = [];
@@ -855,36 +907,35 @@
   let userReadingStatus = {}; // Store reading status for each book
 
   // Fetch books from Supabase
-// Fetch books from Supabase
-async function loadBooksFromSupabase() {
-  try {
-    const response = await fetch('/api/books/');
-    const data = await response.json();
+  async function loadBooksFromSupabase() {
+    try {
+      const response = await fetch('/api/books/');
+      const data = await response.json();
 
-    if (data.success && data.books) {
-      // Transform Supabase data to match your book format
-      allBooks = data.books.map(book => ({
-        id: book.BookID,
-        title: book.Title || 'Unknown Title',
-        author: book.Author || 'Unknown Author',
-        genre: book.Genre || 'General',
-        year: book.Year || new Date().getFullYear(),
-        cover: book.CoverURL || `https://picsum.photos/seed/book${book.BookID}/300/450`,
-        epub_url: book.EpubURL || null  // Add this line
-      }));
+      if (data.success && data.books) {
+        // Transform Supabase data to match your book format
+        allBooks = data.books.map(book => ({
+          id: book.BookID,
+          title: book.Title || 'Unknown Title',
+          author: book.Author || 'Unknown Author',
+          genre: book.Genre || 'General',
+          year: book.Year || new Date().getFullYear(),
+          cover: book.CoverURL || `https://picsum.photos/seed/book${book.BookID}/300/450`,
+          epub_url: book.EpubURL || null
+        }));
 
-      console.log('Loaded books from Supabase:', allBooks.length);
-      return true;
-    } else {
-      throw new Error('Failed to load books from server');
+        console.log('Loaded books from Supabase:', allBooks.length);
+        return true;
+      } else {
+        throw new Error('Failed to load books from server');
+      }
+    } catch (error) {
+      console.error('Error loading books from Supabase:', error);
+      // Fallback to sample books if Supabase fails
+      allBooks = getSampleBooks();
+      return false;
     }
-  } catch (error) {
-    console.error('Error loading books from Supabase:', error);
-    // Fallback to sample books if Supabase fails
-    allBooks = getSampleBooks();
-    return false;
   }
-}
 
   // Fallback sample books (in case Supabase is unavailable)
   function getSampleBooks() {
@@ -994,63 +1045,63 @@ async function loadBooksFromSupabase() {
       return;
     }
 
-const booksHTML = books.map(book => {
-  const status = userReadingStatus[book.id] || 'none';
-  const hasEpub = book.epub_url; // Check if EPUB URL exists
+    const booksHTML = books.map(book => {
+      const status = userReadingStatus[book.id] || 'none';
+      const hasEpub = book.epub_url; // Check if EPUB URL exists
 
-  return `
-    <div class="book-card" data-title="${book.title.toLowerCase()}" data-author="${book.author.toLowerCase()}">
-      <img src="${book.cover}" alt="${book.title}" class="book-cover"
-           onerror="this.src='https://picsum.photos/seed/fallback${book.id}/300/450'">
-      <div class="book-title">${book.title}</div>
-      <div class="book-author">by ${book.author}</div>
-      <div class="book-year">${book.year} • ${book.genre}</div>
+      return `
+        <div class="book-card" data-title="${book.title.toLowerCase()}" data-author="${book.author.toLowerCase()}">
+          <img src="${book.cover}" alt="${book.title}" class="book-cover"
+               onerror="this.src='https://picsum.photos/seed/fallback${book.id}/300/450'">
+          <div class="book-title">${book.title}</div>
+          <div class="book-author">by <span class="author-link" onclick="viewAuthorBooks('${book.author.replace(/'/g, "\\'")}')">${book.author}</span></div>
+          <div class="book-year">${book.year} • ${book.genre}</div>
 
-      <!-- Read EPUB Button -->
-      <button class="read-epub-btn" onclick="openEpubReader(${book.id})" ${!hasEpub ? 'disabled' : ''}>
-        ${hasEpub ? '📖 Read EPUB' : '📚 No EPUB'}
-      </button>
+          <!-- Read EPUB Button -->
+          <button class="read-epub-btn" onclick="openEpubReader(${book.id})" ${!hasEpub ? 'disabled' : ''}>
+            ${hasEpub ? '📖 Read EPUB' : '📚 No EPUB'}
+          </button>
 
-      <div class="reading-status">
-        <button class="status-btn want-to-read ${status === 'want-to-read' ? 'active' : ''}"
-                onclick="updateReadingStatus(${book.id}, 'want-to-read')">
-          Want to Read
-        </button>
-        <button class="status-btn currently-reading ${status === 'currently-reading' ? 'active' : ''}"
-                onclick="updateReadingStatus(${book.id}, 'currently-reading')">
-          Currently Reading
-        </button>
-        <button class="status-btn read ${status === 'read' ? 'active' : ''}"
-                onclick="updateReadingStatus(${book.id}, 'read')">
-          Read
-        </button>
-      </div>
-    </div>
-  `;
-}).join('');
+          <div class="reading-status">
+            <button class="status-btn want-to-read ${status === 'want-to-read' ? 'active' : ''}"
+                    onclick="updateReadingStatus(${book.id}, 'want-to-read')">
+              Want to Read
+            </button>
+            <button class="status-btn currently-reading ${status === 'currently-reading' ? 'active' : ''}"
+                    onclick="updateReadingStatus(${book.id}, 'currently-reading')">
+              Currently Reading
+            </button>
+            <button class="status-btn read ${status === 'read' ? 'active' : ''}"
+                    onclick="updateReadingStatus(${book.id}, 'read')">
+              Read
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
 
     container.innerHTML += booksHTML;
     updateStats();
   }
 
   // EPUB Reader function
-function openEpubReader(bookId) {
-  const book = allBooks.find(b => b.id === bookId);
+  function openEpubReader(bookId) {
+    const book = allBooks.find(b => b.id === bookId);
 
-  if (!book || !book.epub_url) {
-    alert('No EPUB available for this book');
-    return;
+    if (!book || !book.epub_url) {
+      alert('No EPUB available for this book');
+      return;
+    }
+
+    // Open EPUB reader in a new tab
+    const epubReaderUrl = `/epub-reader/?book_id=${bookId}&title=${encodeURIComponent(book.title)}&epub_url=${encodeURIComponent(book.epub_url)}`;
+    window.open(epubReaderUrl, '_blank');
+
+    // Optional: Automatically mark as "Currently Reading"
+    if (userReadingStatus[bookId] !== 'currently-reading') {
+      updateReadingStatus(bookId, 'currently-reading');
+    }
   }
-
-  // Open EPUB reader in a new tab
-  const epubReaderUrl = `/epub-reader/?book_id=${bookId}&title=${encodeURIComponent(book.title)}&epub_url=${encodeURIComponent(book.epub_url)}`;
-  window.open(epubReaderUrl, '_blank');
-
-  // Optional: Automatically mark as "Currently Reading"
-  if (userReadingStatus[bookId] !== 'currently-reading') {
-    updateReadingStatus(bookId, 'currently-reading');
-  }
-}
 
   // Update reading status for a book (cloud version)
   async function updateReadingStatus(bookId, status) {
@@ -1293,8 +1344,20 @@ function openEpubReader(bookId) {
     window.location.href = '/home/';
   }
 
+  function viewAuthorBooks(authorName) {
+    window.location.href = `/author-books/?author=${encodeURIComponent(authorName)}`;
+  }
+
+  function createPost() {
+    window.location.href = '/create-post/';
+  }
+
   function viewProfile() {
-    alert('Profile page coming soon!');
+    if (IS_AUTHOR && AUTHOR_COMPLETED) {
+      window.location.href = `/author-books/?author=${encodeURIComponent("{{ username }}")}`;
+    } else {
+      alert('Profile page coming soon!');
+    }
     closeProfileDropdown();
   }
 
