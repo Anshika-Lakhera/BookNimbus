@@ -713,7 +713,7 @@ def signup_view(request):
             )
 
             # Get base URL for verification links
-            base_url = 'book-nimbus.onrender.com'
+            base_url = 'https://book-nimbus.onrender.com'
 
             # Verification token
             token = get_random_string(32)
