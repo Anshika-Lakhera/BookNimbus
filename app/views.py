@@ -673,6 +673,75 @@ def login_view(request):
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
 
+def verify_email(request):
+    """Email verification page"""
+    try:
+        token = request.GET.get('token')
+        if not token:
+            logger.warning("Email verification attempted without token")
+            return render(request, 'verify_result.html', {
+                'success': False,
+                'message': 'No verification token provided'
+            })
+
+        logger.debug(f"Processing verification token: {token[:8]}...")
+
+        user_id = verification_tokens.get(token)
+        if not user_id:
+            logger.warning(f"Invalid or expired verification token: {token[:8]}...")
+            return render(request, 'verify_result.html', {
+                'success': False,
+                'message': 'Invalid or expired verification token'
+            })
+
+        logger.debug(f"Token valid, looking up user ID: {user_id}")
+        user = Credentials.objects.filter(UserID=user_id).first()
+
+        if not user:
+            logger.error(f"User not found for valid token. UserID: {user_id}, Token: {token[:8]}...")
+            return render(request, 'verify_result.html', {
+                'success': False,
+                'message': 'User account not found'
+            })
+
+        # Update user verification status
+        user.is_verified = True
+        user.save(update_fields=['is_verified'])
+        logger.info(f"User {user_id} successfully verified email")
+
+        # Clean up used token
+        del verification_tokens[token]
+        logger.debug(f"Verification token {token[:8]}... removed from storage")
+
+        # Store user in session
+        request.session['username'] = user.UserName
+        request.session['user_id'] = user.UserID
+        request.session['is_author'] = user.is_author
+        request.session['author_completed'] = user.author_completed
+        logger.debug(f"Session updated for user {user_id}")
+
+        # Redirect based on user type
+        if user.is_author and not user.author_completed:
+            logger.info(f"Author user {user_id} needs profile completion, redirecting to author creation")
+            return render(request, 'verify_result.html', {
+                'success': True,
+                'message': 'Email verified successfully! Setting up your author profile...',
+                'redirect_url': '/author-create/'
+            })
+        else:
+            logger.info(f"Regular user {user_id} verified, redirecting to home")
+            return render(request, 'verify_result.html', {
+                'success': True,
+                'message': 'Email verified successfully!',
+                'redirect_url': '/home/'
+            })
+
+    except Exception as e:
+        logger.error(f"Unexpected error during email verification: {str(e)}", exc_info=True)
+        return render(request, 'verify_result.html', {
+            'success': False,
+            'message': 'An unexpected error occurred during verification'
+        })
 
 @csrf_exempt
 def signup_view(request):
