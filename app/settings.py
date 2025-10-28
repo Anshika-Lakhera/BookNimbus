@@ -111,18 +111,17 @@ FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o755
 # Default field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# CSRF - UPDATE THIS FOR RENDER
+# CSRF settings
 CSRF_TRUSTED_ORIGINS = [
     'https://book-nimbus.onrender.com',
     'http://localhost:8000',
     'http://127.0.0.1:8000'
 ]
 
-# Session settings for production
-SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
-SESSION_COOKIE_HTTPONLY = True
-CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_SAMESITE = 'Lax'
 
 # TEMPORARY: Disable email to prevent timeouts
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
