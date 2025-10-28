@@ -19,6 +19,7 @@ urlpatterns = [
     path('author-create/', views.author_create, name='author_create'),
     path('author-books/', views.author_books, name='author_books'),  # NEW
     path('create-post/', views.create_post, name='create_post'),     # NEW
+    path('debug-email/', views.debug_email_config, name='debug_email'),
 
     # API endpoints for reading status
     path('api/update-reading-status/', views.update_reading_status, name='update_reading_status'),
