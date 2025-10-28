@@ -11,6 +11,7 @@ from django.conf import settings
 import os
 from django.views.decorators.http import require_http_methods
 from .models import Credentials, Books
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 import logging
 
@@ -81,6 +82,7 @@ def shelves(request):
     })
 
 
+@ensure_csrf_cookie
 def author_create(request):
     """Author profile creation page - sets is_author to True"""
     username = request.session.get('username')
