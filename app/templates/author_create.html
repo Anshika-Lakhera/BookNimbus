@@ -429,59 +429,52 @@
             document.getElementById(popupId).style.display = 'none';
         }
 
-        // Get CSRF token for Django
-        function getCSRFToken() {
-            const name = 'csrftoken';
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
+    // Get CSRF token for Django
+    function getCSRFToken() {
+        const name = 'csrftoken';
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
                 }
             }
-            return cookieValue;
         }
+        return cookieValue;
+    }
 
-        function submitAuthorProfile() {
-            const submitBtn = document.querySelector('.submit-btn');
-            submitBtn.classList.add('loading');
+    function submitAuthorProfile() {
+        const submitBtn = document.querySelector('.submit-btn');
+        submitBtn.classList.add('loading');
 
-            fetch('/author-create/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCSRFToken()
-                },
-                body: JSON.stringify({})
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    window.location.href = data.redirect;
-                } else {
-                    alert('Error: ' + data.message);
-                    submitBtn.classList.remove('loading');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error creating author profile. Please try again.');
+        fetch('/author-create/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()  // Add CSRF token
+            },
+            body: JSON.stringify({})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                window.location.href = data.redirect;
+            } else {
+                alert('Error: ' + data.message);
                 submitBtn.classList.remove('loading');
-            });
-
-            closePopup('submitPopup');
-        }
-
-        // Close popup when clicking outside
-        window.onclick = function(event) {
-            if (event.target.classList.contains('popup-overlay')) {
-                event.target.style.display = 'none';
             }
-        }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error creating author profile. Please try again.');
+            submitBtn.classList.remove('loading');
+        });
+
+        closePopup('submitPopup');
+    }
     </script>
 </body>
 </html>
