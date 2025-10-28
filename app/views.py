@@ -676,88 +676,18 @@ def login_view(request):
 
 @csrf_exempt
 def signup_view(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
-            username = data.get('username')
-            email = data.get('email')
-            password = data.get('password')
-            confirm_password = data.get('confirm_password')
-
-            # Validation
-            if not username or not password or not email:
-                return JsonResponse({'status': 'error', 'message': 'All fields required'}, status=400)
-
-            if len(username) < 3:
-                return JsonResponse({'status': 'error', 'message': 'Username must be at least 3 characters'},
-                                    status=400)
-
-            if len(password) < 6:
-                return JsonResponse({'status': 'error', 'message': 'Password must be at least 6 characters'},
-                                    status=400)
-
-            if password != confirm_password:
-                return JsonResponse({'status': 'error', 'message': 'Passwords do not match'}, status=400)
-
-            if Credentials.objects.filter(UserName=username).exists():
-                return JsonResponse({'status': 'error', 'message': 'Username already exists'}, status=400)
-
-            if Credentials.objects.filter(Email=email).exists():
-                return JsonResponse({'status': 'error', 'message': 'Email already registered'}, status=400)
-
-            hashed_password = make_password(password)
-            user = Credentials.objects.create(
-                UserName=username,
-                Password=hashed_password,
-                Email=email,
-                is_verified=False,
-                is_author=True,  # NEW: Set all new users as authors by default
-                author_completed=False,  # They need to complete onboarding
-                Read={},
-                Currently_Reading={},
-                Want_To_Read={}
-            )
-
-            # Get base URL for verification links
-            base_url = 'https://book-nimbus.onrender.com'
-
-            # Verification token
-            token = get_random_string(32)
-            verification_tokens[token] = user.UserID
-
-            verification_link = f"{base_url}/verify-email/?token={token}"
-
-            try:
-                send_mail(
-                    'Verify your BookNimbus account',
-                    f'Welcome to BookNimbus!\n\nClick the link below to verify your email:\n{verification_link}\n\nThis link will expire in 24 hours.',
-                    'noreply@booknimbus.com',
-                    [email],
-                    fail_silently=False,
-                )
-                print(f"✅ Email sent successfully to {email}")
-            except Exception as email_error:
-                print(f"❌ EMAIL ERROR: {email_error}")
-                import traceback
-                traceback.print_exc()
-                # Continue anyway - user created successfully
-                return JsonResponse({
-                    'status': 'success',
-                    'message': 'Account created! Email delivery may be delayed. Please check your email shortly.'
-                })
-
-            return JsonResponse({
-                'status': 'success',
-                'message': 'Account created! Please check your email to verify your account.'
-            })
-
-        except Exception as e:
-            print(f"✗ SIGNUP ERROR: {e}")
-            import traceback
-            traceback.print_exc()
-            return JsonResponse({'status': 'error', 'message': f'Error during signup: {str(e)}'}, status=500)
-
-    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+  # In your signup_view, add this check:
+try:
+    send_mail(
+        'Test from BookNimbus',
+        'If you get this, SendGrid is working!',
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        fail_silently=False,
+    )
+    print("✅ SendGrid email sent successfully!")
+except Exception as e:
+    print(f"❌ SendGrid error: {e}")
 
 def verify_email(request):
     """Email verification page"""
