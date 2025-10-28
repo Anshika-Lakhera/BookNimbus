@@ -676,88 +676,167 @@ def login_view(request):
 
 @csrf_exempt
 def signup_view(request):
-  # In your signup_view, add this check:
-try:
-    send_mail(
-        'Test from BookNimbus',
-        'If you get this, SendGrid is working!',
-        settings.DEFAULT_FROM_EMAIL,
-        [email],
-        fail_silently=False,
-    )
-    print("✅ SendGrid email sent successfully!")
-except Exception as e:
-    print(f"❌ SendGrid error: {e}")
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            username = data.get('username')
+            email = data.get('email')
+            password = data.get('password')
+            confirm_password = data.get('confirm_password')
 
-def verify_email(request):
-    """Email verification page"""
+            # DEBUG: Print received data
+            print("=== SIGNUP DEBUG ===")
+            print(f"Username: {username}")
+            print(f"Email: {email}")
+            print(f"Password length: {len(password) if password else 0}")
+            print(f"Confirm password length: {len(confirm_password) if confirm_password else 0}")
+
+            # Validation
+            if not username or not password or not email:
+                print("❌ Missing required fields")
+                return JsonResponse({'status': 'error', 'message': 'All fields required'}, status=400)
+
+            if len(username) < 3:
+                return JsonResponse({'status': 'error', 'message': 'Username must be at least 3 characters'}, status=400)
+
+            if len(password) < 6:
+                return JsonResponse({'status': 'error', 'message': 'Password must be at least 6 characters'}, status=400)
+
+            if password != confirm_password:
+                return JsonResponse({'status': 'error', 'message': 'Passwords do not match'}, status=400)
+
+            # Check if user exists
+            if Credentials.objects.filter(UserName=username).exists():
+                return JsonResponse({'status': 'error', 'message': 'Username already exists'}, status=400)
+
+            if Credentials.objects.filter(Email=email).exists():
+                return JsonResponse({'status': 'error', 'message': 'Email already registered'}, status=400)
+
+            # Create user
+            hashed_password = make_password(password)
+            user = Credentials.objects.create(
+                UserName=username,
+                Password=hashed_password,
+                Email=email,
+                is_verified=False,
+                is_author=True,  # Set all new users as authors by default
+                author_completed=False,  # They need to complete onboarding
+                Read={},
+                Currently_Reading={},
+                Want_To_Read={}
+            )
+
+            print(f"✅ User created: {username} (ID: {user.UserID})")
+
+            # Get base URL for verification links
+            base_url = 'https://book-nimbus.onrender.com'
+
+            # Verification token
+            token = get_random_string(32)
+            verification_tokens[token] = user.UserID
+            verification_link = f"{base_url}/verify-email/?token={token}"
+
+            print(f"📧 Verification link: {verification_link}")
+
+            # DEBUG: Print email configuration
+            from django.conf import settings
+            print("=== EMAIL CONFIG DEBUG ===")
+            print(f"EMAIL_HOST: {settings.EMAIL_HOST}")
+            print(f"EMAIL_PORT: {settings.EMAIL_PORT}")
+            print(f"EMAIL_HOST_USER: {settings.EMAIL_HOST_USER}")
+            print(f"DEFAULT_FROM_EMAIL: {settings.DEFAULT_FROM_EMAIL}")
+            print(f"SENDGRID_API_KEY exists: {'Yes' if os.environ.get('SENDGRID_API_KEY') else 'No'}")
+            if os.environ.get('SENDGRID_API_KEY'):
+                print(f"SENDGRID_API_KEY length: {len(os.environ.get('SENDGRID_API_KEY'))}")
+            print("==========================")
+
+            # Send verification email with detailed error handling
+            try:
+                print(f"🔄 Attempting to send email to: {email}")
+                
+                send_mail(
+                    'Verify your BookNimbus account',
+                    f'Welcome to BookNimbus!\n\nClick the link below to verify your email:\n{verification_link}\n\nThis link will expire in 24 hours.',
+                    settings.DEFAULT_FROM_EMAIL,
+                    [email],
+                    fail_silently=False,
+                )
+                
+                print(f"✅ Email sent successfully to {email}")
+                logger.info(f"Verification email sent to {email}")
+                
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Account created! Please check your email to verify your account.'
+                })
+
+            except Exception as email_error:
+                print(f"❌ EMAIL SENDING FAILED: {str(email_error)}")
+                logger.error(f"Email sending failed for {email}: {str(email_error)}")
+                
+                # Import traceback for detailed error
+                import traceback
+                error_details = traceback.format_exc()
+                print(f"📄 FULL ERROR TRACEBACK:\n{error_details}")
+                
+                # User was created successfully, but email failed
+                # We'll still return success but inform user about email issue
+                return JsonResponse({
+                    'status': 'success',
+                    'message': 'Account created! However, we encountered an issue sending the verification email. Please contact support or try logging in directly.'
+                })
+
+        except json.JSONDecodeError:
+            print("❌ Invalid JSON in request")
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
+            
+        except Exception as e:
+            print(f"❌ SIGNUP UNEXPECTED ERROR: {str(e)}")
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"📄 FULL ERROR TRACEBACK:\n{error_details}")
+            
+            logger.error(f"Unexpected error during signup: {str(e)}")
+            return JsonResponse({
+                'status': 'error', 
+                'message': 'An unexpected error occurred during signup. Please try again.'
+            }, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
+
+@csrf_exempt
+def debug_email_config(request):
+    """Debug endpoint to check email configuration"""
+    from django.conf import settings
+    import os
+    
+    config_info = {
+        'EMAIL_HOST': getattr(settings, 'EMAIL_HOST', 'NOT SET'),
+        'EMAIL_PORT': getattr(settings, 'EMAIL_PORT', 'NOT SET'),
+        'EMAIL_HOST_USER': getattr(settings, 'EMAIL_HOST_USER', 'NOT SET'),
+        'DEFAULT_FROM_EMAIL': getattr(settings, 'DEFAULT_FROM_EMAIL', 'NOT SET'),
+        'SENDGRID_API_KEY_IN_ENV': 'YES' if os.environ.get('SENDGRID_API_KEY') else 'NO',
+        'SENDGRID_API_KEY_LENGTH': len(os.environ.get('SENDGRID_API_KEY', '')),
+    }
+    
+    # Try to send a test email
+    test_result = "Not attempted"
     try:
-        token = request.GET.get('token')
-        if not token:
-            logger.warning("Email verification attempted without token")
-            return render(request, 'verify_result.html', {
-                'success': False,
-                'message': 'No verification token provided'
-            })
-
-        logger.debug(f"Processing verification token: {token[:8]}...")  # Log partial token for security
-
-        user_id = verification_tokens.get(token)
-        if not user_id:
-            logger.warning(f"Invalid or expired verification token: {token[:8]}...")
-            return render(request, 'verify_result.html', {
-                'success': False,
-                'message': 'Invalid or expired verification token'
-            })
-
-        logger.debug(f"Token valid, looking up user ID: {user_id}")
-        user = Credentials.objects.filter(UserID=user_id).first()
-
-        if not user:
-            logger.error(f"User not found for valid token. UserID: {user_id}, Token: {token[:8]}...")
-            return render(request, 'verify_result.html', {
-                'success': False,
-                'message': 'User account not found'
-            })
-
-        # Update user verification status
-        user.is_verified = True
-        user.save(update_fields=['is_verified'])
-        logger.info(f"User {user_id} successfully verified email")
-
-        # Clean up used token
-        del verification_tokens[token]
-        logger.debug(f"Verification token {token[:8]}... removed from storage")
-
-        # Store user in session
-        request.session['username'] = user.UserName
-        request.session['user_id'] = user.UserID
-        request.session['is_author'] = user.is_author
-        request.session['author_completed'] = user.author_completed
-        logger.debug(f"Session updated for user {user_id}")
-
-        # Redirect based on user type
-        if user.is_author and not user.author_completed:
-            logger.info(f"Author user {user_id} needs profile completion, redirecting to author creation")
-            return render(request, 'verify_result.html', {
-                'success': True,
-                'message': 'Email verified successfully! Setting up your author profile...',
-                'redirect_url': '/author-create/'
-            })
-        else:
-            logger.info(f"Regular user {user_id} verified, redirecting to home")
-            return render(request, 'verify_result.html', {
-                'success': True,
-                'message': 'Email verified successfully!',
-                'redirect_url': '/home/'
-            })
-
+        from django.core.mail import send_mail
+        send_mail(
+            'BookNimbus Test Email',
+            'This is a test email from BookNimbus.',
+            settings.DEFAULT_FROM_EMAIL,
+            [settings.DEFAULT_FROM_EMAIL],  # Send to yourself
+            fail_silently=False,
+        )
+        test_result = "SUCCESS - Email sent"
     except Exception as e:
-        logger.error(f"Unexpected error during email verification: {str(e)}", exc_info=True)
-        return render(request, 'verify_result.html', {
-            'success': False,
-            'message': 'An unexpected error occurred during verification'
-        })
+        test_result = f"FAILED - {str(e)}"
+    
+    config_info['TEST_EMAIL_RESULT'] = test_result
+    
+    return JsonResponse(config_info)
 
 @csrf_exempt
 def forgot_password(request):
