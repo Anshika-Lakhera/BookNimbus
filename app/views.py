@@ -26,7 +26,7 @@ password_reset_tokens = {}
 GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID',
                                   '1098327710097-5mqs9s1linj3rqck41phtl7ibh18u5ra.apps.googleusercontent.com')
 GOOGLE_CLIENT_SECRET = os.environ.get('GOOGLE_CLIENT_SECRET', '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')
-GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'http://127.0.0.1:8000/google-callback/')
+GOOGLE_REDIRECT_URI = os.environ.get('GOOGLE_REDIRECT_URI', 'http://book-nimbus.onrender.com/google-callback/')
 
 # Supabase Configuration
 # Supabase Configuration
@@ -213,10 +213,14 @@ def home(request):
         except Credentials.DoesNotExist:
             return redirect('index')
 
-    # Check if user needs author onboarding
-    user_obj = Credentials.objects.get(UserID=user_id)
-    if user_obj.is_author and not user_obj.author_completed:
-        return redirect('author_create')
+    # Check if user needs author onboarding (BOTH NORMAL AND GOOGLE USERS)
+    try:
+        user_obj = Credentials.objects.get(UserID=user_id)
+        if user_obj.is_author and not user_obj.author_completed:
+            print(f"🔄 User {username} needs author creation, redirecting...")
+            return redirect('author_create')
+    except Credentials.DoesNotExist:
+        return redirect('index')
 
     return render(request, 'home.html', {
         'username': username,
@@ -224,7 +228,6 @@ def home(request):
         'is_author': request.session.get('is_author', False),
         'author_completed': request.session.get('author_completed', False)
     })
-
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -560,7 +563,7 @@ def google_callback(request):
                 user.google_id = google_id
                 user.save(update_fields=['google_id'])
             else:
-                # Create new user with Google
+                # Create new user with Google - SET AS AUTHOR LIKE NORMAL SIGNUP
                 base_username = name
                 username = base_username
                 counter = 1
@@ -575,8 +578,8 @@ def google_callback(request):
                     Email=email,
                     google_id=google_id,
                     is_verified=True,
-                    is_author=False,
-                    author_completed=False,
+                    is_author=True,  # ← SET TO TRUE LIKE NORMAL SIGNUP
+                    author_completed=False,  # ← SET TO FALSE SO THEY GET REDIRECTED
                     Read={},
                     Currently_Reading={},
                     Want_To_Read={}
@@ -589,14 +592,19 @@ def google_callback(request):
         request.session['author_completed'] = user.author_completed
         request.session['is_google_user'] = True
 
+        # DEBUG: Print user status
+        print(f"🔍 GOOGLE USER STATUS: is_author={user.is_author}, author_completed={user.author_completed}")
+
         # Redirect to author creation if not completed
         if user.is_author and not user.author_completed:
+            print(f"🔄 Redirecting Google user {user.UserName} to author creation")
             return render(request, 'auth_result.html', {
                 'success': True,
                 'message': f'Welcome, {user.UserName}!',
                 'redirect_url': '/author-create/'
             })
         else:
+            print(f"🔄 Redirecting Google user {user.UserName} to home")
             return render(request, 'auth_result.html', {
                 'success': True,
                 'message': f'Welcome, {user.UserName}!',
