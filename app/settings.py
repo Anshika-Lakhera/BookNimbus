@@ -124,14 +124,17 @@ CSRF_COOKIE_SECURE = True
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = True
 
-# SendGrid Email Configuration
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.sendgrid.net'
-EMAIL_PORT = 587  # Use port 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'apikey'  # ← Literally this word
-EMAIL_HOST_PASSWORD = os.environ.get('SENDGRID_API_KEY')  # Your API key from environment
-DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@booknimbus.com')
+# TEMPORARY: Disable email to prevent timeouts
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# COMMENT OUT SendGrid settings for now:
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.sendgrid.net'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'apikey'
+# EMAIL_HOST_PASSWORD = os.environ.get('SENDGRID_API_KEY')
+# DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@booknimbus.com')
 
 # Allauth Configuration
 SITE_ID = 1
