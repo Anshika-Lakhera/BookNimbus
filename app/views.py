@@ -616,56 +616,33 @@ def login_view(request):
             username = data.get('username')
             password = data.get('password')
 
-            if not username or not password:
-                return JsonResponse({'status': 'error', 'message': 'Username and password required'}, status=400)
-
             user = Credentials.objects.filter(UserName=username).first()
 
             if not user:
                 return JsonResponse({'status': 'error', 'message': 'Invalid username or password'}, status=401)
 
-            # Check if this is a Google user trying to use password
-            if user.google_id and not user.Password:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'This account uses Google authentication. Please sign in with Google.'
-                }, status=401)
+            # REMOVE EMAIL VERIFICATION CHECK
+            # if not user.is_verified:
+            #     return JsonResponse({
+            #         'status': 'error',
+            #         'message': 'Please verify your email before logging in'
+            #     }, status=401)
 
             if not check_password(password, user.Password):
                 return JsonResponse({'status': 'error', 'message': 'Invalid username or password'}, status=401)
-
-            if not user.is_verified:
-                return JsonResponse({
-                    'status': 'error',
-                    'message': 'Please verify your email before logging in'
-                }, status=401)
 
             # Store user info in session
             request.session['username'] = username
             request.session['user_id'] = user.UserID
             request.session['is_author'] = user.is_author
             request.session['author_completed'] = user.author_completed
-            request.session['is_google_user'] = False
 
-            # DEBUG: Check author status
-            print(f"DEBUG - User {username}: is_author={user.is_author}, author_completed={user.author_completed}")
-
-            # Redirect to author creation if user is marked as author but hasn't completed onboarding
-            if user.is_author and not user.author_completed:
-                print(f"DEBUG - Redirecting {username} to author creation")
-                return JsonResponse({
-                    'status': 'success',
-                    'message': f'Welcome back, {username}!',
-                    'redirect': '/author-create/',
-                    'is_author': user.is_author
-                })
-            else:
-                return JsonResponse({
-                    'status': 'success',
-                    'message': f'Welcome back, {username}!',
-                    'redirect': '/home/',
-                    'is_author': user.is_author
-                })
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Welcome back, {username}!',
+                'redirect': '/home/',
+                'is_author': user.is_author
+            })
 
         except Exception as e:
             print(f"✗ LOGIN ERROR: {e}")
@@ -753,16 +730,10 @@ def signup_view(request):
             password = data.get('password')
             confirm_password = data.get('confirm_password')
 
-            # DEBUG: Print received data
-            print("=== SIGNUP DEBUG ===")
-            print(f"Username: {username}")
-            print(f"Email: {email}")
-            print(f"Password length: {len(password) if password else 0}")
-            print(f"Confirm password length: {len(confirm_password) if confirm_password else 0}")
+            print(f"=== SIGNUP ATTEMPT: {username}, {email} ===")
 
             # Validation
             if not username or not password or not email:
-                print("❌ Missing required fields")
                 return JsonResponse({'status': 'error', 'message': 'All fields required'}, status=400)
 
             if len(username) < 3:
@@ -774,7 +745,6 @@ def signup_view(request):
             if password != confirm_password:
                 return JsonResponse({'status': 'error', 'message': 'Passwords do not match'}, status=400)
 
-            # Check if user exists
             if Credentials.objects.filter(UserName=username).exists():
                 return JsonResponse({'status': 'error', 'message': 'Username already exists'}, status=400)
 
@@ -787,9 +757,9 @@ def signup_view(request):
                 UserName=username,
                 Password=hashed_password,
                 Email=email,
-                is_verified=False,
-                is_author=True,  # Set all new users as authors by default
-                author_completed=False,  # They need to complete onboarding
+                is_verified=True,  # AUTO-VERIFY FOR NOW
+                is_author=True,
+                author_completed=False,
                 Read={},
                 Currently_Reading={},
                 Want_To_Read={}
@@ -797,82 +767,30 @@ def signup_view(request):
 
             print(f"✅ User created: {username} (ID: {user.UserID})")
 
-            # Get base URL for verification links
-            base_url = 'https://book-nimbus.onrender.com'
+            # Store user in session immediately (skip email verification)
+            request.session['username'] = username
+            request.session['user_id'] = user.UserID
+            request.session['is_author'] = True
+            request.session['author_completed'] = False
 
-            # Verification token
-            token = get_random_string(32)
-            verification_tokens[token] = user.UserID
-            verification_link = f"{base_url}/verify-email/?token={token}"
+            # Return success - user can login immediately
+            return JsonResponse({
+                'status': 'success',
+                'message': 'Account created successfully! You can now login.',
+                'redirect': '/home/'
+            })
 
-            print(f"📧 Verification link: {verification_link}")
-
-            # DEBUG: Print email configuration
-            from django.conf import settings
-            print("=== EMAIL CONFIG DEBUG ===")
-            print(f"EMAIL_HOST: {settings.EMAIL_HOST}")
-            print(f"EMAIL_PORT: {settings.EMAIL_PORT}")
-            print(f"EMAIL_HOST_USER: {settings.EMAIL_HOST_USER}")
-            print(f"DEFAULT_FROM_EMAIL: {settings.DEFAULT_FROM_EMAIL}")
-            print(f"SENDGRID_API_KEY exists: {'Yes' if os.environ.get('SENDGRID_API_KEY') else 'No'}")
-            if os.environ.get('SENDGRID_API_KEY'):
-                print(f"SENDGRID_API_KEY length: {len(os.environ.get('SENDGRID_API_KEY'))}")
-            print("==========================")
-
-            # Send verification email with detailed error handling
-            try:
-                print(f"🔄 Attempting to send email to: {email}")
-                
-                send_mail(
-                    'Verify your BookNimbus account',
-                    f'Welcome to BookNimbus!\n\nClick the link below to verify your email:\n{verification_link}\n\nThis link will expire in 24 hours.',
-                    settings.DEFAULT_FROM_EMAIL,
-                    [email],
-                    fail_silently=False,
-                )
-                
-                print(f"✅ Email sent successfully to {email}")
-                logger.info(f"Verification email sent to {email}")
-                
-                return JsonResponse({
-                    'status': 'success',
-                    'message': 'Account created! Please check your email to verify your account.'
-                })
-
-            except Exception as email_error:
-                print(f"❌ EMAIL SENDING FAILED: {str(email_error)}")
-                logger.error(f"Email sending failed for {email}: {str(email_error)}")
-                
-                # Import traceback for detailed error
-                import traceback
-                error_details = traceback.format_exc()
-                print(f"📄 FULL ERROR TRACEBACK:\n{error_details}")
-                
-                # User was created successfully, but email failed
-                # We'll still return success but inform user about email issue
-                return JsonResponse({
-                    'status': 'success',
-                    'message': 'Account created! However, we encountered an issue sending the verification email. Please contact support or try logging in directly.'
-                })
-
-        except json.JSONDecodeError:
-            print("❌ Invalid JSON in request")
-            return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
-            
         except Exception as e:
-            print(f"❌ SIGNUP UNEXPECTED ERROR: {str(e)}")
+            print(f"❌ SIGNUP ERROR: {str(e)}")
             import traceback
-            error_details = traceback.format_exc()
-            print(f"📄 FULL ERROR TRACEBACK:\n{error_details}")
-            
-            logger.error(f"Unexpected error during signup: {str(e)}")
+            traceback.print_exc()
             return JsonResponse({
                 'status': 'error', 
-                'message': 'An unexpected error occurred during signup. Please try again.'
+                'message': 'An error occurred during signup. Please try again.'
             }, status=500)
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=405)
-
+  
 @csrf_exempt
 def debug_email_config(request):
     """Debug endpoint to check email configuration"""
