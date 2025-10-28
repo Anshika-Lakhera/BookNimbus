@@ -1119,6 +1119,27 @@ def reset_password(request):
         'message': 'Invalid request method'
     }, status=405)
 
+
+def reset_password_page(request):
+    """Password reset form page"""
+    token = request.GET.get('token')
+    client_ip = get_client_ip(request)
+    
+    logger.info(f"Password reset page accessed - Token: {token}, IP: {client_ip}")
+
+    if not token or token not in password_reset_tokens:
+        logger.warning(f"Invalid or missing reset token - Token: {token}, IP: {client_ip}")
+        return render(request, 'reset_password.html', {
+            'valid_token': False,
+            'message': 'Invalid or expired reset link'
+        })
+
+    logger.info(f"Valid reset token - Token: {token}, IP: {client_ip}")
+    return render(request, 'reset_password.html', {
+        'valid_token': True,
+        'token': token
+    })
+
 def logout_view(request):
     """Logout user"""
     username = request.session.get('username')
