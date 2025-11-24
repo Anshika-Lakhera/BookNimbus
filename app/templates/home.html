@@ -766,20 +766,24 @@
             <span>▼</span>
           </div>
           <div class="profile-dropdown" id="profileDropdown">
-            <div class="dropdown-item" onclick="viewProfile()">
-              <span>👤</span>
-              <span>View Profile</span>
-            </div>
-            <div class="dropdown-item theme-toggle">
-              <span>🌙</span>
-              <span>Dark Mode</span>
-              <div class="toggle-switch" id="themeToggle"></div>
-            </div>
-            <div class="dropdown-item" onclick="goToStore()">
-              <span>📚</span>
-              <span>Go to Store</span>
-            </div>
-          </div>
+    <div class="dropdown-item" onclick="viewProfile()">
+        <span>👤</span>
+        <span>View Profile</span>
+    </div>
+    <div class="dropdown-item" onclick="editBio()">
+        <span>✏️</span>
+        <span>Edit Bio</span>
+    </div>
+    <div class="dropdown-item theme-toggle">
+        <span>🌙</span>
+        <span>Dark Mode</span>
+        <div class="toggle-switch" id="themeToggle"></div>
+    </div>
+    <div class="dropdown-item" onclick="goToStore()">
+        <span>📚</span>
+        <span>Go to Store</span>
+    </div>
+</div>
         </div>
         <button class="logout-btn" onclick="logout()">Logout</button>
       </div>
@@ -793,22 +797,32 @@
     </div>
 
     <div class="stats">
-      <div class="stat-card" onclick="goToStore('want-to-read')">
+    <div class="stat-card" onclick="goToStore('want-to-read')">
         <div class="stat-icon">📖</div>
         <div class="stat-number" id="wantToReadCount" data-target="0">0</div>
         <div class="stat-label">Want to Read</div>
-      </div>
-      <div class="stat-card" onclick="goToStore('currently-reading')">
+    </div>
+    <div class="stat-card" onclick="goToStore('currently-reading')">
         <div class="stat-icon">📚</div>
         <div class="stat-number" id="currentlyReadingCount" data-target="0">0</div>
         <div class="stat-label">Currently Reading</div>
-      </div>
-      <div class="stat-card" onclick="goToStore('read')">
+    </div>
+    <div class="stat-card" onclick="goToStore('read')">
         <div class="stat-icon">✅</div>
         <div class="stat-number" id="readCount" data-target="0">0</div>
         <div class="stat-label">Read</div>
-      </div>
     </div>
+    <div class="stat-card" onclick="showFollowData()">
+        <div class="stat-icon">👥</div>
+        <div class="stat-number" id="followersCount">{{ followers_count|default:0 }}</div>
+        <div class="stat-label">Followers</div>
+    </div>
+    <div class="stat-card" onclick="showFollowData()">
+        <div class="stat-icon">🔍</div>
+        <div class="stat-number" id="followingCount">{{ following_count|default:0 }}</div>
+        <div class="stat-label">Following</div>
+    </div>
+</div>
 
     {% if is_author and author_completed %}
 <div class="author-section">
@@ -868,6 +882,35 @@
       }
     }
 
+    async function showFollowData() {
+        try {
+            const response = await fetch('/api/follow-data/');
+            const data = await response.json();
+
+            if (data.status === 'success') {
+                let message = `Followers: ${data.followers_count}\nFollowing: ${data.following_count}\n\n`;
+
+                if (data.followers.length > 0) {
+                    message += "Followers:\n";
+                    data.followers.forEach(follower => {
+                        message += `• ${follower.username}\n`;
+                    });
+                }
+
+                if (data.following.length > 0) {
+                    message += "\nFollowing:\n";
+                    data.following.forEach(following => {
+                        message += `• ${following.username}\n`;
+                    });
+                }
+
+                alert(message);
+            }
+        } catch (error) {
+            console.error('Error loading follow data:', error);
+        }
+    }
+
     function initTheme() {
       const savedTheme = localStorage.getItem('theme') || 'dark';
       document.body.setAttribute('data-theme', savedTheme);
@@ -885,6 +928,36 @@
       const dropdown = document.getElementById('profileDropdown');
       dropdown.classList.toggle('active');
     }
+
+    function updateProfileDropdown() {
+        const dropdown = document.getElementById('profileDropdown');
+        if (IS_AUTHOR && AUTHOR_COMPLETED) {
+            dropdown.innerHTML = `
+                <div class="dropdown-item" onclick="viewProfile()">
+                    <span>👤</span>
+                    <span>View Profile</span>
+                </div>
+                <div class="dropdown-item" onclick="editBio()">
+                    <span>✏️</span>
+                    <span>Edit Bio</span>
+                </div>
+                <div class="dropdown-item theme-toggle">
+                    <span>🌙</span>
+                    <span>Dark Mode</span>
+                    <div class="toggle-switch" id="themeToggle"></div>
+                </div>
+                <div class="dropdown-item" onclick="goToStore()">
+                    <span>📚</span>
+                    <span>Go to Store</span>
+                </div>
+            `;
+        }
+    }
+
+    function editBio() {
+    window.location.href = '/edit-bio/';
+    closeProfileDropdown();
+}
 
     function closeProfileDropdown() {
       const dropdown = document.getElementById('profileDropdown');
@@ -910,34 +983,52 @@
     }
 
     // Load user stats from cloud
-    async function loadUserStats() {
-      try {
+
+    // Load user stats from cloud
+async function loadUserStats() {
+    try {
         const response = await fetch(`/api/user-stats/${CURRENT_USER_ID}/`);
         const data = await response.json();
 
         if (data.success) {
-          // Update the stats with real data from cloud
-          document.getElementById('wantToReadCount').textContent = data.stats.want_to_read;
-          document.getElementById('currentlyReadingCount').textContent = data.stats.currently_reading;
-          document.getElementById('readCount').textContent = data.stats.read;
+            // Update the stats with real data from cloud
+            document.getElementById('wantToReadCount').textContent = data.stats.want_to_read;
+            document.getElementById('currentlyReadingCount').textContent = data.stats.currently_reading;
+            document.getElementById('readCount').textContent = data.stats.read;
 
-          // Also update the data-target attributes for animation
-          document.getElementById('wantToReadCount').setAttribute('data-target', data.stats.want_to_read);
-          document.getElementById('currentlyReadingCount').setAttribute('data-target', data.stats.currently_reading);
-          document.getElementById('readCount').setAttribute('data-target', data.stats.read);
+            // Also update the data-target attributes for animation
+            document.getElementById('wantToReadCount').setAttribute('data-target', data.stats.want_to_read);
+            document.getElementById('currentlyReadingCount').setAttribute('data-target', data.stats.currently_reading);
+            document.getElementById('readCount').setAttribute('data-target', data.stats.read);
 
-          // Animate the counters
-          const counters = document.querySelectorAll('.stat-number');
-          counters.forEach(counter => animateCounter(counter));
+            // Animate the counters
+            const counters = document.querySelectorAll('.stat-number');
+            counters.forEach(counter => animateCounter(counter));
         }
-      } catch (error) {
+    } catch (error) {
         console.error('Error loading stats:', error);
-      }
     }
+}
 
-    function initCounters() {
-      loadUserStats();
+// Load follow data
+async function loadFollowData() {
+    try {
+        const response = await fetch('/api/follow-data/');
+        const data = await response.json();
+
+        if (data.status === 'success') {
+            document.getElementById('followersCount').textContent = data.followers_count;
+            document.getElementById('followingCount').textContent = data.following_count;
+        }
+    } catch (error) {
+        console.error('Error loading follow data:', error);
     }
+}
+
+function initCounters() {
+    loadUserStats();
+    loadFollowData(); // Load follow counts too
+}
 
     // Author functions
     function createPost() {
@@ -1007,6 +1098,7 @@
 
     // Initialize the page
     document.addEventListener('DOMContentLoaded', () => {
+      updateProfileDropdown();
       // Set username
       document.getElementById('username').querySelector('span:nth-child(2)').textContent = "{{ username }}";
 

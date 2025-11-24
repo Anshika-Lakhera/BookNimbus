@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Complete Your Author Profile</title>
+    <title>Edit Bio - BookNimbus</title>
     <style>
         * {
             margin: 0;
@@ -79,7 +79,7 @@
             font-family: inherit;
             transition: border-color 0.3s ease;
             resize: vertical;
-            min-height: 100px;
+            min-height: 120px;
         }
 
         .form-group textarea:focus {
@@ -149,6 +149,24 @@
             box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
         }
 
+        .back-btn {
+            width: 100%;
+            padding: 12px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            color: #667eea;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .back-btn:hover {
+            background: #f0f4ff;
+        }
+
         .loader {
             display: none;
             width: 20px;
@@ -197,11 +215,11 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>Complete Your Author Profile</h1>
-            <p>Tell readers about yourself and upload a profile picture</p>
+            <h1>Edit Your Profile</h1>
+            <p>Update your bio and profile picture</p>
         </div>
 
-        <form id="author-form" enctype="multipart/form-data">
+        <form id="edit-bio-form" enctype="multipart/form-data">
             <div class="form-group">
                 <label for="bio">Author Bio</label>
                 <textarea id="bio" name="bio" placeholder="Tell readers about yourself, your writing style, and what inspires you..."></textarea>
@@ -219,8 +237,12 @@
             </div>
 
             <button type="submit" class="submit-btn" id="submit-btn">
-                <span class="btn-text">Complete Profile</span>
+                <span class="btn-text">Update Profile</span>
                 <div class="loader"></div>
+            </button>
+
+            <button type="button" class="back-btn" onclick="goBack()">
+                ← Back to Home
             </button>
 
             <div class="message" id="message"></div>
@@ -241,7 +263,7 @@
             }
         });
 
-        document.getElementById('author-form').addEventListener('submit', async function(e) {
+        document.getElementById('edit-bio-form').addEventListener('submit', async function(e) {
             e.preventDefault();
 
             const submitBtn = document.getElementById('submit-btn');
@@ -254,7 +276,7 @@
             try {
                 const formData = new FormData(this);
 
-                const response = await fetch('/author-create/', {
+                const response = await fetch('/edit-bio/', {
                     method: 'POST',
                     body: formData,
                     headers: {
@@ -270,13 +292,13 @@
                     messageEl.style.display = 'block';
 
                     setTimeout(() => {
-                        window.location.href = data.redirect;
+                        window.location.href = '/home/';
                     }, 1000);
                 } else {
                     throw new Error(data.message);
                 }
             } catch (error) {
-                messageEl.textContent = error.message || 'Error creating author profile. Please try again.';
+                messageEl.textContent = error.message || 'Error updating profile. Please try again.';
                 messageEl.className = 'message error';
                 messageEl.style.display = 'block';
             } finally {
@@ -299,6 +321,10 @@
                 }
             }
             return cookieValue;
+        }
+
+        function goBack() {
+            window.location.href = '/home/';
         }
     </script>
 </body>
