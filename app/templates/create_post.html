@@ -278,6 +278,15 @@
             color: #666;
             margin-top: 5px;
         }
+
+        /* Add this to ensure hidden form sections don't interfere */
+        .form-section {
+            display: none;
+        }
+
+        .form-section.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -305,8 +314,8 @@
             <!-- Book Form Section -->
             <div class="form-section active" id="book-form">
                 <div class="form-group">
-                    <label for="title">Book Title *</label>
-                    <input type="text" id="title" name="title" placeholder="Enter book title" required>
+                    <label for="book_title">Book Title *</label>
+                    <input type="text" id="book_title" name="book_title" placeholder="Enter book title" required>
                 </div>
 
                 <div class="form-group">
@@ -370,7 +379,7 @@
             <div class="form-section" id="blog-form">
                 <div class="form-group">
                     <label for="blog_title">Post Title *</label>
-                    <input type="text" id="blog_title" name="title" placeholder="Enter post title">
+                    <input type="text" id="blog_title" name="blog_title" placeholder="Enter post title">
                 </div>
 
                 <div class="form-group">
@@ -415,25 +424,45 @@
                 document.getElementById('btn-text').textContent =
                     type === 'book' ? 'Publish Book' : 'Publish Post';
 
-                // Handle required attributes
+                // Handle required attributes - clear them properly
                 if (type === 'book') {
-                    document.getElementById('title').required = true;
+                    // Enable book fields
+                    document.getElementById('book_title').required = true;
                     document.getElementById('author').required = true;
                     document.getElementById('genre').required = true;
                     document.getElementById('year').required = true;
                     document.getElementById('cover').required = true;
                     document.getElementById('epub').required = true;
+
+                    // Disable blog fields
                     document.getElementById('blog_title').required = false;
                     document.getElementById('content').required = false;
+
+                    // Clear blog fields to prevent interference
+                    document.getElementById('blog_title').value = '';
+                    document.getElementById('content').value = '';
                 } else {
-                    document.getElementById('title').required = false;
+                    // Enable blog fields
+                    document.getElementById('blog_title').required = true;
+                    document.getElementById('content').required = true;
+
+                    // Disable book fields
+                    document.getElementById('book_title').required = false;
                     document.getElementById('author').required = false;
                     document.getElementById('genre').required = false;
                     document.getElementById('year').required = false;
                     document.getElementById('cover').required = false;
                     document.getElementById('epub').required = false;
-                    document.getElementById('blog_title').required = true;
-                    document.getElementById('content').required = true;
+
+                    // Clear book fields to prevent interference
+                    document.getElementById('book_title').value = '';
+                    document.getElementById('author').value = '{{ username }}';
+                    document.getElementById('genre').value = '';
+                    document.getElementById('year').value = '2024';
+                    document.getElementById('cover').value = '';
+                    document.getElementById('epub').value = '';
+                    document.getElementById('cover-preview').innerHTML = '';
+                    document.getElementById('epub-name').textContent = '';
                 }
             });
         });
@@ -475,6 +504,13 @@
 
             try {
                 const formData = new FormData(this);
+                const postType = document.getElementById('post_type').value;
+
+                // Debug: Log form data
+                console.log('Form data entries:');
+                for (let [key, value] of formData.entries()) {
+                    console.log(key + ': ' + value);
+                }
 
                 const response = await fetch('/create-post/', {
                     method: 'POST',
@@ -502,6 +538,7 @@
                 messageEl.textContent = error.message || 'Error creating post. Please try again.';
                 messageEl.className = 'message error';
                 messageEl.style.display = 'block';
+                console.error('Submission error:', error);
             } finally {
                 submitBtn.classList.remove('loading');
                 submitBtn.disabled = false;
@@ -528,6 +565,12 @@
         function goBack() {
             window.location.href = '/shelves/';
         }
+
+        // Initialize form on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set initial author name
+            document.getElementById('author').value = '{{ username }}';
+        });
     </script>
 </body>
 </html>

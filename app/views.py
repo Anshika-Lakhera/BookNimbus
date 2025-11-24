@@ -138,24 +138,36 @@ def author_books(request):
 
     try:
         current_user = Credentials.objects.get(UserID=user_id)
-        author_user = Credentials.objects.get(UserName=author_name)
+
+        # Try to get author user, but don't require it to exist
+        try:
+            author_user = Credentials.objects.get(UserName=author_name)
+            is_following = current_user.is_following(author_user.UserID)
+            followers_count = author_user.get_followers_count()
+            following_count = author_user.get_following_count()
+            author_bio = author_user.bio or 'No bio available yet.'
+            author_photo_url = author_user.profile_picture or ''
+            author_user_id = author_user.UserID
+        except Credentials.DoesNotExist:
+            # Author doesn't have a Credentials record, use default values
+            is_following = False
+            followers_count = 0
+            following_count = 0
+            author_bio = f'Welcome to the author page of {author_name}. Explore their published works below.'
+            author_photo_url = ''
+            author_user_id = None
 
         books = Books.get_books_by_author(author_name)
         books_data = [book.to_dict() for book in books]
 
-        # Get author's posts
-        posts = Posts.objects.filter(author=author_user).order_by('-created_at')
-        posts_data = [post.to_dict() for post in posts]
+        # Get author's posts if author exists
+        posts_data = []
+        if author_user_id:
+            posts = Posts.objects.filter(author_id=author_user_id).order_by('-created_at')
+            posts_data = [post.to_dict() for post in posts]
 
-        is_following = current_user.is_following(author_user.UserID)
-
-        followers_count = author_user.get_followers_count()
-        following_count = author_user.get_following_count()
         books_count = books.count()
-        posts_count = posts.count()
-
-        author_bio = author_user.bio or 'No bio available yet.'
-        author_photo_url = author_user.profile_picture or ''
+        posts_count = len(posts_data)
 
         return render(request, 'author_books.html', {
             'username': username,
@@ -172,11 +184,27 @@ def author_books(request):
             'posts_count': posts_count,
             'author_bio': author_bio,
             'author_photo_url': author_photo_url,
-            'author_user_id': author_user.UserID,
+            'author_user_id': author_user_id,
         })
 
     except Credentials.DoesNotExist:
-        return render(request, 'error.html', {'message': 'Author not found'})
+        return render(request, 'author_books.html', {
+            'username': username,
+            'user_id': user_id,
+            'author_name': author_name,
+            'books': [],
+            'posts': [],
+            'is_author': False,
+            'author_completed': False,
+            'is_following': False,
+            'followers_count': 0,
+            'following_count': 0,
+            'books_count': 0,
+            'posts_count': 0,
+            'author_bio': f'Welcome to the author page of {author_name}. Explore their published works below.',
+            'author_photo_url': '',
+            'author_user_id': None,
+        })
 
 
 @require_http_methods(["GET"])
@@ -373,40 +401,79 @@ def create_post(request):
             print(f"FILES data: {dict(request.FILES)}")
 
             if post_type == 'book':
-                # Book creation logic
-                title = request.POST.get('title', '').strip()
+                # Book creation logic - use the correct field names
+                title = request.POST.get('book_title', '').strip()
                 author = request.POST.get('author', '').strip()
                 genre = request.POST.get('genre', '').strip()
                 year = request.POST.get('year', '').strip()
                 cover_file = request.FILES.get('cover')
                 epub_file = request.FILES.get('epub')
 
-                print(f"Book data - Title: {title}, Author: {author}, Genre: {genre}, Year: {year}")
+                print(f"Book data - Title: '{title}', Author: '{author}', Genre: '{genre}', Year: '{year}'")
                 print(f"Files - Cover: {cover_file}, EPUB: {epub_file}")
 
-                if not all([title, author, genre, year]):
+                # Better validation with specific error messages
+                if not title:
                     return JsonResponse({
                         'status': 'error',
-                        'message': 'All text fields are required for book creation'
+                        'message': 'Book title is required'
                     }, status=400)
 
-                if not cover_file or not epub_file:
+                if not author:
                     return JsonResponse({
                         'status': 'error',
-                        'message': 'Both cover image and EPUB file are required for book creation'
+                        'message': 'Author name is required'
+                    }, status=400)
+
+                if not genre:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Genre is required'
+                    }, status=400)
+
+                if not year:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Publication year is required'
+                    }, status=400)
+
+                if not cover_file:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Cover image is required'
+                    }, status=400)
+
+                if not epub_file:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'EPUB file is required'
                     }, status=400)
 
                 # Validate file types
                 if not cover_file.content_type.startswith('image/'):
                     return JsonResponse({
                         'status': 'error',
-                        'message': 'Cover must be an image file'
+                        'message': 'Cover must be an image file (JPEG, PNG, etc.)'
                     }, status=400)
 
                 if not epub_file.name.lower().endswith('.epub'):
                     return JsonResponse({
                         'status': 'error',
-                        'message': 'Book must be in EPUB format'
+                        'message': 'Book must be in EPUB format (.epub file)'
+                    }, status=400)
+
+                # Validate year is a number
+                try:
+                    year_int = int(year)
+                    if year_int < 1900 or year_int > 2030:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': 'Publication year must be between 1900 and 2030'
+                        }, status=400)
+                except ValueError:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Publication year must be a valid number'
                     }, status=400)
 
                 cover_extension = os.path.splitext(cover_file.name)[1]
@@ -437,7 +504,7 @@ def create_post(request):
                     title=title,
                     author=author,
                     genre=genre,
-                    year=int(year),
+                    year=year_int,
                     coverurl=cover_url,
                     epub_url=epub_url
                 )
@@ -450,8 +517,8 @@ def create_post(request):
                     'book_id': book.bookid
                 })
             else:
-                # Blog post creation
-                title = request.POST.get('title', '').strip()
+                # Blog post creation - use correct field names
+                title = request.POST.get('blog_title', '').strip()
                 content = request.POST.get('content', '').strip()
 
                 print(f"Blog data - Title: '{title}', Content: '{content[:100]}...'")
@@ -488,7 +555,6 @@ def create_post(request):
                 'status': 'error',
                 'message': f'Error creating post: {str(e)}'
             }, status=500)
-
 
 def upload_to_supabase(file, bucket_name, filename):
     try:
@@ -1307,6 +1373,7 @@ def debug_email_config(request):
 
     return JsonResponse(config_info)
 
+
 def author_books_detail(request, author_name):
     try:
         username = request.session.get('username')
@@ -1316,24 +1383,35 @@ def author_books_detail(request, author_name):
             return redirect('index')
 
         current_user = Credentials.objects.get(UserID=user_id)
-        author_user = Credentials.objects.get(UserName=author_name)
+
+        # Try to get author user
+        try:
+            author_user = Credentials.objects.get(UserName=author_name)
+            is_following = current_user.is_following(author_user.UserID)
+            followers_count = author_user.get_followers_count()
+            following_count = author_user.get_following_count()
+            author_bio = author_user.bio or 'No bio available yet.'
+            author_photo_url = author_user.profile_picture or ''
+            author_user_id = author_user.UserID
+        except Credentials.DoesNotExist:
+            is_following = False
+            followers_count = 0
+            following_count = 0
+            author_bio = f'Welcome to the author page of {author_name}. Explore their published works below.'
+            author_photo_url = ''
+            author_user_id = None
 
         books = Books.get_books_by_author(author_name)
         books_list = [book.to_dict() for book in books]
 
-        # Get author's posts
-        posts = Posts.objects.filter(author=author_user).order_by('-created_at')
-        posts_data = [post.to_dict() for post in posts]
+        # Get author's posts if author exists
+        posts_data = []
+        if author_user_id:
+            posts = Posts.objects.filter(author_id=author_user_id).order_by('-created_at')
+            posts_data = [post.to_dict() for post in posts]
 
-        is_following = current_user.is_following(author_user.UserID)
-
-        followers_count = author_user.get_followers_count()
-        following_count = author_user.get_following_count()
         books_count = books.count()
-        posts_count = posts.count()
-
-        author_bio = author_user.bio or 'No bio available yet.'
-        author_photo_url = author_user.profile_picture or ''
+        posts_count = len(posts_data)
 
         context = {
             'author_name': author_name,
@@ -1349,13 +1427,28 @@ def author_books_detail(request, author_name):
             'posts_count': posts_count,
             'author_bio': author_bio,
             'author_photo_url': author_photo_url,
-            'author_user_id': author_user.UserID,
+            'author_user_id': author_user_id,
         }
 
         return render(request, 'author_books.html', context)
 
     except Credentials.DoesNotExist:
-        return render(request, 'error.html', {'message': 'User not found'})
+        return render(request, 'author_books.html', {
+            'author_name': author_name,
+            'books': [],
+            'posts': [],
+            'username': username,
+            'is_author': False,
+            'author_completed': False,
+            'is_following': False,
+            'followers_count': 0,
+            'following_count': 0,
+            'books_count': 0,
+            'posts_count': 0,
+            'author_bio': f'Welcome to the author page of {author_name}. Explore their published works below.',
+            'author_photo_url': '',
+            'author_user_id': None,
+        })
 
 @require_http_methods(["GET"])
 def get_author_posts(request, author_id):
