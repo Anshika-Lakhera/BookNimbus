@@ -185,7 +185,7 @@ class Credentials(models.Model):
             Email=email,
             google_id=google_id,
             is_verified=True,
-            is_author=True,
+            is_author=False,
             author_completed=False,
             Read={},
             Currently_Reading={},
@@ -666,9 +666,11 @@ def author_create(request):
     if request.method == 'POST':
         try:
             bio = request.POST.get('bio', '')
+            user_role = request.POST.get('user_role', 'reader')  # Get the role choice
             profile_picture = request.FILES.get('profile_picture')
 
-            user.is_author = True
+            # Set is_author based on choice
+            user.is_author = (user_role == 'author')
             user.author_completed = True
             user.bio = bio
 
@@ -680,18 +682,20 @@ def author_create(request):
 
             user.save(update_fields=['is_author', 'author_completed', 'bio', 'profile_picture'])
 
-            request.session['is_author'] = True
+            request.session['is_author'] = user.is_author
             request.session['author_completed'] = True
+
+            success_message = 'Author profile created successfully!' if user.is_author else 'Profile created successfully!'
 
             return JsonResponse({
                 'status': 'success',
-                'message': 'Author profile created successfully!',
+                'message': success_message,
                 'redirect': '/home/'
             })
         except Exception as e:
             return JsonResponse({
                 'status': 'error',
-                'message': f'Error creating author profile: {str(e)}'
+                'message': f'Error creating profile: {str(e)}'
             }, status=500)
 
     return render(request, 'author_create.html', {
@@ -710,24 +714,36 @@ def author_books(request):
 
     try:
         current_user = Credentials.objects.get(UserID=user_id)
-        author_user = Credentials.objects.get(UserName=author_name)
+
+        # Try to get author user, but don't require it to exist
+        try:
+            author_user = Credentials.objects.get(UserName=author_name)
+            is_following = current_user.is_following(author_user.UserID)
+            followers_count = author_user.get_followers_count()
+            following_count = author_user.get_following_count()
+            author_bio = author_user.bio or 'No bio available yet.'
+            author_photo_url = author_user.profile_picture or ''
+            author_user_id = author_user.UserID
+        except Credentials.DoesNotExist:
+            # Author doesn't have a Credentials record, use default values
+            is_following = False
+            followers_count = 0
+            following_count = 0
+            author_bio = f'Welcome to the author page of {author_name}. Explore their published works below.'
+            author_photo_url = ''
+            author_user_id = None
 
         books = Books.get_books_by_author(author_name)
         books_data = [book.to_dict() for book in books]
 
-        # Get author's posts
-        posts = Posts.objects.filter(author=author_user).order_by('-created_at')
-        posts_data = [post.to_dict() for post in posts]
+        # Get author's posts if author exists
+        posts_data = []
+        if author_user_id:
+            posts = Posts.objects.filter(author_id=author_user_id).order_by('-created_at')
+            posts_data = [post.to_dict() for post in posts]
 
-        is_following = current_user.is_following(author_user.UserID)
-
-        followers_count = author_user.get_followers_count()
-        following_count = author_user.get_following_count()
         books_count = books.count()
-        posts_count = posts.count()
-
-        author_bio = author_user.bio or 'No bio available yet.'
-        author_photo_url = author_user.profile_picture or ''
+        posts_count = len(posts_data)
 
         return render(request, 'author_books.html', {
             'username': username,
@@ -744,11 +760,27 @@ def author_books(request):
             'posts_count': posts_count,
             'author_bio': author_bio,
             'author_photo_url': author_photo_url,
-            'author_user_id': author_user.UserID,
+            'author_user_id': author_user_id,
         })
 
     except Credentials.DoesNotExist:
-        return render(request, 'error.html', {'message': 'Author not found'})
+        return render(request, 'author_books.html', {
+            'username': username,
+            'user_id': user_id,
+            'author_name': author_name,
+            'books': [],
+            'posts': [],
+            'is_author': False,
+            'author_completed': False,
+            'is_following': False,
+            'followers_count': 0,
+            'following_count': 0,
+            'books_count': 0,
+            'posts_count': 0,
+            'author_bio': f'Welcome to the author page of {author_name}. Explore their published works below.',
+            'author_photo_url': '',
+            'author_user_id': None,
+        })
 
 
 @require_http_methods(["GET"])
@@ -945,40 +977,79 @@ def create_post(request):
             print(f"FILES data: {dict(request.FILES)}")
 
             if post_type == 'book':
-                # Book creation logic
-                title = request.POST.get('title', '').strip()
+                # Book creation logic - use the correct field names
+                title = request.POST.get('book_title', '').strip()
                 author = request.POST.get('author', '').strip()
                 genre = request.POST.get('genre', '').strip()
                 year = request.POST.get('year', '').strip()
                 cover_file = request.FILES.get('cover')
                 epub_file = request.FILES.get('epub')
 
-                print(f"Book data - Title: {title}, Author: {author}, Genre: {genre}, Year: {year}")
+                print(f"Book data - Title: '{title}', Author: '{author}', Genre: '{genre}', Year: '{year}'")
                 print(f"Files - Cover: {cover_file}, EPUB: {epub_file}")
 
-                if not all([title, author, genre, year]):
+                # Better validation with specific error messages
+                if not title:
                     return JsonResponse({
                         'status': 'error',
-                        'message': 'All text fields are required for book creation'
+                        'message': 'Book title is required'
                     }, status=400)
 
-                if not cover_file or not epub_file:
+                if not author:
                     return JsonResponse({
                         'status': 'error',
-                        'message': 'Both cover image and EPUB file are required for book creation'
+                        'message': 'Author name is required'
+                    }, status=400)
+
+                if not genre:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Genre is required'
+                    }, status=400)
+
+                if not year:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Publication year is required'
+                    }, status=400)
+
+                if not cover_file:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Cover image is required'
+                    }, status=400)
+
+                if not epub_file:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'EPUB file is required'
                     }, status=400)
 
                 # Validate file types
                 if not cover_file.content_type.startswith('image/'):
                     return JsonResponse({
                         'status': 'error',
-                        'message': 'Cover must be an image file'
+                        'message': 'Cover must be an image file (JPEG, PNG, etc.)'
                     }, status=400)
 
                 if not epub_file.name.lower().endswith('.epub'):
                     return JsonResponse({
                         'status': 'error',
-                        'message': 'Book must be in EPUB format'
+                        'message': 'Book must be in EPUB format (.epub file)'
+                    }, status=400)
+
+                # Validate year is a number
+                try:
+                    year_int = int(year)
+                    if year_int < 1900 or year_int > 2030:
+                        return JsonResponse({
+                            'status': 'error',
+                            'message': 'Publication year must be between 1900 and 2030'
+                        }, status=400)
+                except ValueError:
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Publication year must be a valid number'
                     }, status=400)
 
                 cover_extension = os.path.splitext(cover_file.name)[1]
@@ -1009,7 +1080,7 @@ def create_post(request):
                     title=title,
                     author=author,
                     genre=genre,
-                    year=int(year),
+                    year=year_int,
                     coverurl=cover_url,
                     epub_url=epub_url
                 )
@@ -1022,8 +1093,8 @@ def create_post(request):
                     'book_id': book.bookid
                 })
             else:
-                # Blog post creation
-                title = request.POST.get('title', '').strip()
+                # Blog post creation - use correct field names
+                title = request.POST.get('blog_title', '').strip()
                 content = request.POST.get('content', '').strip()
 
                 print(f"Blog data - Title: '{title}', Content: '{content[:100]}...'")
@@ -1060,7 +1131,6 @@ def create_post(request):
                 'status': 'error',
                 'message': f'Error creating post: {str(e)}'
             }, status=500)
-
 
 def upload_to_supabase(file, bucket_name, filename):
     try:
@@ -1310,12 +1380,25 @@ def login_view(request):
             request.session['is_author'] = user.is_author
             request.session['author_completed'] = user.author_completed
 
-            return JsonResponse({
-                'status': 'success',
-                'message': f'Welcome back, {username}!',
-                'redirect': '/home/',
-                'is_author': user.is_author
-            })
+            print(f"🔍 LOGIN: User {username} - is_author: {user.is_author}, author_completed: {user.author_completed}")
+
+            # Check if user needs to complete author profile
+            if user.is_author and not user.author_completed:
+                return JsonResponse({
+                    'status': 'success',
+                    'message': f'Welcome back, {username}! Please complete your author profile.',
+                    'redirect': '/author-create/',
+                    'is_author': user.is_author,
+                    'needs_author_setup': True
+                })
+            else:
+                return JsonResponse({
+                    'status': 'success',
+                    'message': f'Welcome back, {username}!',
+                    'redirect': '/home/',
+                    'is_author': user.is_author,
+                    'needs_author_setup': False
+                })
 
         except Exception as e:
             print(f"✗ LOGIN ERROR: {e}")
@@ -1428,8 +1511,8 @@ def signup_view(request):
                 Password=hashed_password,
                 Email=email,
                 is_verified=True,
-                is_author=True,
-                author_completed=False,
+                is_author=True,  # Everyone is an author by default
+                author_completed=False,  # But needs to complete profile
                 Read={},
                 Currently_Reading={},
                 Want_To_Read={},
@@ -1439,17 +1522,19 @@ def signup_view(request):
                 following_count=0
             )
 
-            print(f"✅ User created: {username} (ID: {user.UserID})")
+            print(f"✅ User created: {username} (ID: {user.UserID}) - Author: {user.is_author}, Completed: {user.author_completed}")
 
+            # Set session
             request.session['username'] = username
             request.session['user_id'] = user.UserID
             request.session['is_author'] = True
             request.session['author_completed'] = False
 
+            # ALWAYS redirect new signups to author creation
             return JsonResponse({
                 'status': 'success',
-                'message': 'Account created successfully! You can now login.',
-                'redirect': '/home/'
+                'message': 'Account created! Please complete your author profile.',
+                'redirect': '/author-create/'
             })
 
         except Exception as e:
@@ -1879,6 +1964,7 @@ def debug_email_config(request):
 
     return JsonResponse(config_info)
 
+
 def author_books_detail(request, author_name):
     try:
         username = request.session.get('username')
@@ -1888,24 +1974,35 @@ def author_books_detail(request, author_name):
             return redirect('index')
 
         current_user = Credentials.objects.get(UserID=user_id)
-        author_user = Credentials.objects.get(UserName=author_name)
+
+        # Try to get author user
+        try:
+            author_user = Credentials.objects.get(UserName=author_name)
+            is_following = current_user.is_following(author_user.UserID)
+            followers_count = author_user.get_followers_count()
+            following_count = author_user.get_following_count()
+            author_bio = author_user.bio or 'No bio available yet.'
+            author_photo_url = author_user.profile_picture or ''
+            author_user_id = author_user.UserID
+        except Credentials.DoesNotExist:
+            is_following = False
+            followers_count = 0
+            following_count = 0
+            author_bio = f'Welcome to the author page of {author_name}. Explore their published works below.'
+            author_photo_url = ''
+            author_user_id = None
 
         books = Books.get_books_by_author(author_name)
         books_list = [book.to_dict() for book in books]
 
-        # Get author's posts
-        posts = Posts.objects.filter(author=author_user).order_by('-created_at')
-        posts_data = [post.to_dict() for post in posts]
+        # Get author's posts if author exists
+        posts_data = []
+        if author_user_id:
+            posts = Posts.objects.filter(author_id=author_user_id).order_by('-created_at')
+            posts_data = [post.to_dict() for post in posts]
 
-        is_following = current_user.is_following(author_user.UserID)
-
-        followers_count = author_user.get_followers_count()
-        following_count = author_user.get_following_count()
         books_count = books.count()
-        posts_count = posts.count()
-
-        author_bio = author_user.bio or 'No bio available yet.'
-        author_photo_url = author_user.profile_picture or ''
+        posts_count = len(posts_data)
 
         context = {
             'author_name': author_name,
@@ -1921,13 +2018,28 @@ def author_books_detail(request, author_name):
             'posts_count': posts_count,
             'author_bio': author_bio,
             'author_photo_url': author_photo_url,
-            'author_user_id': author_user.UserID,
+            'author_user_id': author_user_id,
         }
 
         return render(request, 'author_books.html', context)
 
     except Credentials.DoesNotExist:
-        return render(request, 'error.html', {'message': 'User not found'})
+        return render(request, 'author_books.html', {
+            'author_name': author_name,
+            'books': [],
+            'posts': [],
+            'username': username,
+            'is_author': False,
+            'author_completed': False,
+            'is_following': False,
+            'followers_count': 0,
+            'following_count': 0,
+            'books_count': 0,
+            'posts_count': 0,
+            'author_bio': f'Welcome to the author page of {author_name}. Explore their published works below.',
+            'author_photo_url': '',
+            'author_user_id': None,
+        })
 
 @require_http_methods(["GET"])
 def get_author_posts(request, author_id):
@@ -3372,7 +3484,7 @@ templates\author_create.html
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Complete Your Author Profile</title>
+    <title>Complete Your Profile - BookNimbus</title>
     <style>
         * {
             margin: 0;
@@ -3427,6 +3539,69 @@ templates\author_create.html
             font-size: 16px;
         }
 
+        /* Choice Section */
+        .choice-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .choice-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .choice-options {
+            display: flex;
+            gap: 15px;
+        }
+
+        .choice-card {
+            flex: 1;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+            text-align: center;
+        }
+
+        .choice-card:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+            transform: translateY(-2px);
+        }
+
+        .choice-card.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .choice-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .choice-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .choice-description {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        /* Form Fields */
         .form-group {
             margin-bottom: 20px;
         }
@@ -3518,6 +3693,24 @@ templates\author_create.html
             box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
         }
 
+        .skip-btn {
+            width: 100%;
+            padding: 12px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            color: #667eea;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .skip-btn:hover {
+            background: #f0f4ff;
+        }
+
         .loader {
             display: none;
             width: 20px;
@@ -3561,45 +3754,142 @@ templates\author_create.html
             border: 1px solid rgba(255, 71, 87, 0.3);
             color: #ff4757;
         }
+
+        .author-fields {
+            display: none;
+        }
+
+        .author-fields.show {
+            display: block;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #1565c0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Complete Your Author Profile</h1>
-            <p>Tell readers about yourself and upload a profile picture</p>
+            <h1>Welcome to BookNimbus! 📚</h1>
+            <p>Let's set up your profile</p>
         </div>
 
         <form id="author-form" enctype="multipart/form-data">
-            <div class="form-group">
-                <label for="bio">Author Bio</label>
-                <textarea id="bio" name="bio" placeholder="Tell readers about yourself, your writing style, and what inspires you..."></textarea>
-            </div>
-
-            <div class="form-group">
-                <label for="profile_picture">Profile Picture (Optional)</label>
-                <div class="file-input">
-                    <input type="file" id="profile_picture" name="profile_picture" accept="image/*">
-                    <label for="profile_picture" class="file-input-label">
-                        📷 Click to upload profile picture
-                    </label>
+            <!-- Choice Section -->
+            <div class="choice-section">
+                <div class="choice-title">How do you want to use BookNimbus?</div>
+                <div class="choice-options">
+                    <div class="choice-card" data-role="reader" onclick="selectRole('reader')">
+                        <div class="choice-icon">📖</div>
+                        <div class="choice-label">Reader</div>
+                        <div class="choice-description">Discover and track books you love</div>
+                    </div>
+                    <div class="choice-card" data-role="author" onclick="selectRole('author')">
+                        <div class="choice-icon">✍️</div>
+                        <div class="choice-label">Author</div>
+                        <div class="choice-description">Publish your books and share your stories</div>
+                    </div>
                 </div>
-                <div class="preview" id="profile-preview"></div>
             </div>
 
-            <button type="submit" class="submit-btn" id="submit-btn">
-                <span class="btn-text">Complete Profile</span>
-                <div class="loader"></div>
-            </button>
+            <input type="hidden" id="user_role" name="user_role" value="">
+
+            <!-- Reader Section -->
+            <div id="reader-section" style="display: none;">
+                <div class="info-box">
+                    ✨ As a reader, you can track your reading progress, discover new books, and follow your favorite authors!
+                </div>
+
+                <div class="form-group">
+                    <label for="reader_bio">About You (Optional)</label>
+                    <textarea id="reader_bio" name="bio" placeholder="Tell us about your reading interests..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="reader_picture">Profile Picture (Optional)</label>
+                    <div class="file-input">
+                        <input type="file" id="reader_picture" name="profile_picture" accept="image/*">
+                        <label for="reader_picture" class="file-input-label">
+                            📷 Click to upload profile picture
+                        </label>
+                    </div>
+                    <div class="preview" id="reader-preview"></div>
+                </div>
+
+                <button type="submit" class="submit-btn" id="reader-submit-btn">
+                    <span class="btn-text">Complete Profile</span>
+                    <div class="loader"></div>
+                </button>
+
+                <button type="button" class="skip-btn" onclick="skipProfile()">
+                    Skip for Now
+                </button>
+            </div>
+
+            <!-- Author Section -->
+            <div id="author-section" style="display: none;">
+                <div class="info-box">
+                    🎉 Great! As an author, you'll be able to publish books, write blog posts, and connect with readers!
+                </div>
+
+                <div class="form-group">
+                    <label for="author_bio">Author Bio *</label>
+                    <textarea id="author_bio" name="bio" placeholder="Tell readers about yourself, your writing style, and what inspires you..." required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="author_picture">Profile Picture (Recommended)</label>
+                    <div class="file-input">
+                        <input type="file" id="author_picture" name="profile_picture" accept="image/*">
+                        <label for="author_picture" class="file-input-label">
+                            📷 Click to upload profile picture
+                        </label>
+                    </div>
+                    <div class="preview" id="author-preview"></div>
+                </div>
+
+                <button type="submit" class="submit-btn" id="author-submit-btn">
+                    <span class="btn-text">Complete Author Profile</span>
+                    <div class="loader"></div>
+                </button>
+            </div>
 
             <div class="message" id="message"></div>
         </form>
     </div>
 
     <script>
-        document.getElementById('profile_picture').addEventListener('change', function(e) {
+        let selectedRole = null;
+
+        function selectRole(role) {
+            selectedRole = role;
+
+            // Update UI
+            document.querySelectorAll('.choice-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            document.querySelector(`[data-role="${role}"]`).classList.add('selected');
+
+            // Hide all sections
+            document.getElementById('reader-section').style.display = 'none';
+            document.getElementById('author-section').style.display = 'none';
+
+            // Show selected section
+            document.getElementById(`${role}-section`).style.display = 'block';
+            document.getElementById('user_role').value = role;
+        }
+
+        // Handle file preview for reader
+        document.getElementById('reader_picture').addEventListener('change', function(e) {
             const file = e.target.files[0];
-            const preview = document.getElementById('profile-preview');
+            const preview = document.getElementById('reader-preview');
 
             if (file) {
                 const reader = new FileReader();
@@ -3610,10 +3900,40 @@ templates\author_create.html
             }
         });
 
+        // Handle file preview for author
+        document.getElementById('author_picture').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('author-preview');
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `<img src="${e.target.result}" alt="Profile preview" class="profile-preview">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function skipProfile() {
+            if (confirm('Are you sure you want to skip? You can always complete your profile later.')) {
+                window.location.href = '/home/';
+            }
+        }
+
         document.getElementById('author-form').addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            const submitBtn = document.getElementById('submit-btn');
+            if (!selectedRole) {
+                const messageEl = document.getElementById('message');
+                messageEl.textContent = 'Please select whether you want to be a Reader or Author';
+                messageEl.className = 'message error';
+                messageEl.style.display = 'block';
+                return;
+            }
+
+            const submitBtn = selectedRole === 'reader' ?
+                document.getElementById('reader-submit-btn') :
+                document.getElementById('author-submit-btn');
             const messageEl = document.getElementById('message');
 
             submitBtn.classList.add('loading');
@@ -3621,7 +3941,32 @@ templates\author_create.html
             messageEl.style.display = 'none';
 
             try {
-                const formData = new FormData(this);
+                const formData = new FormData();
+
+                // Add role
+                formData.append('user_role', selectedRole);
+
+                // Add bio based on role
+                if (selectedRole === 'reader') {
+                    const bio = document.getElementById('reader_bio').value;
+                    formData.append('bio', bio);
+
+                    const picture = document.getElementById('reader_picture').files[0];
+                    if (picture) {
+                        formData.append('profile_picture', picture);
+                    }
+                } else {
+                    const bio = document.getElementById('author_bio').value;
+                    if (!bio.trim()) {
+                        throw new Error('Author bio is required');
+                    }
+                    formData.append('bio', bio);
+
+                    const picture = document.getElementById('author_picture').files[0];
+                    if (picture) {
+                        formData.append('profile_picture', picture);
+                    }
+                }
 
                 const response = await fetch('/author-create/', {
                     method: 'POST',
@@ -3645,7 +3990,7 @@ templates\author_create.html
                     throw new Error(data.message);
                 }
             } catch (error) {
-                messageEl.textContent = error.message || 'Error creating author profile. Please try again.';
+                messageEl.textContent = error.message || 'Error creating profile. Please try again.';
                 messageEl.className = 'message error';
                 messageEl.style.display = 'block';
             } finally {
@@ -4015,6 +4360,15 @@ templates\create_post.html
             color: #666;
             margin-top: 5px;
         }
+
+        /* Add this to ensure hidden form sections don't interfere */
+        .form-section {
+            display: none;
+        }
+
+        .form-section.active {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -4042,8 +4396,8 @@ templates\create_post.html
             <!-- Book Form Section -->
             <div class="form-section active" id="book-form">
                 <div class="form-group">
-                    <label for="title">Book Title *</label>
-                    <input type="text" id="title" name="title" placeholder="Enter book title" required>
+                    <label for="book_title">Book Title *</label>
+                    <input type="text" id="book_title" name="book_title" placeholder="Enter book title" required>
                 </div>
 
                 <div class="form-group">
@@ -4107,7 +4461,7 @@ templates\create_post.html
             <div class="form-section" id="blog-form">
                 <div class="form-group">
                     <label for="blog_title">Post Title *</label>
-                    <input type="text" id="blog_title" name="title" placeholder="Enter post title">
+                    <input type="text" id="blog_title" name="blog_title" placeholder="Enter post title">
                 </div>
 
                 <div class="form-group">
@@ -4152,25 +4506,45 @@ templates\create_post.html
                 document.getElementById('btn-text').textContent =
                     type === 'book' ? 'Publish Book' : 'Publish Post';
 
-                // Handle required attributes
+                // Handle required attributes - clear them properly
                 if (type === 'book') {
-                    document.getElementById('title').required = true;
+                    // Enable book fields
+                    document.getElementById('book_title').required = true;
                     document.getElementById('author').required = true;
                     document.getElementById('genre').required = true;
                     document.getElementById('year').required = true;
                     document.getElementById('cover').required = true;
                     document.getElementById('epub').required = true;
+
+                    // Disable blog fields
                     document.getElementById('blog_title').required = false;
                     document.getElementById('content').required = false;
+
+                    // Clear blog fields to prevent interference
+                    document.getElementById('blog_title').value = '';
+                    document.getElementById('content').value = '';
                 } else {
-                    document.getElementById('title').required = false;
+                    // Enable blog fields
+                    document.getElementById('blog_title').required = true;
+                    document.getElementById('content').required = true;
+
+                    // Disable book fields
+                    document.getElementById('book_title').required = false;
                     document.getElementById('author').required = false;
                     document.getElementById('genre').required = false;
                     document.getElementById('year').required = false;
                     document.getElementById('cover').required = false;
                     document.getElementById('epub').required = false;
-                    document.getElementById('blog_title').required = true;
-                    document.getElementById('content').required = true;
+
+                    // Clear book fields to prevent interference
+                    document.getElementById('book_title').value = '';
+                    document.getElementById('author').value = '{{ username }}';
+                    document.getElementById('genre').value = '';
+                    document.getElementById('year').value = '2024';
+                    document.getElementById('cover').value = '';
+                    document.getElementById('epub').value = '';
+                    document.getElementById('cover-preview').innerHTML = '';
+                    document.getElementById('epub-name').textContent = '';
                 }
             });
         });
@@ -4212,6 +4586,13 @@ templates\create_post.html
 
             try {
                 const formData = new FormData(this);
+                const postType = document.getElementById('post_type').value;
+
+                // Debug: Log form data
+                console.log('Form data entries:');
+                for (let [key, value] of formData.entries()) {
+                    console.log(key + ': ' + value);
+                }
 
                 const response = await fetch('/create-post/', {
                     method: 'POST',
@@ -4239,6 +4620,7 @@ templates\create_post.html
                 messageEl.textContent = error.message || 'Error creating post. Please try again.';
                 messageEl.className = 'message error';
                 messageEl.style.display = 'block';
+                console.error('Submission error:', error);
             } finally {
                 submitBtn.classList.remove('loading');
                 submitBtn.disabled = false;
@@ -4265,6 +4647,12 @@ templates\create_post.html
         function goBack() {
             window.location.href = '/shelves/';
         }
+
+        // Initialize form on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set initial author name
+            document.getElementById('author').value = '{{ username }}';
+        });
     </script>
 </body>
 </html>
@@ -5047,6 +5435,66 @@ if (!epubUrl) {
   });
 }
 </script>
+</body>
+</html>
+
+templates\error.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Error - BookNimbus</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        p {
+            font-size: 1.1rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+        }
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚠️ Oops! Something went wrong</h1>
+        <p>{{ message }}</p>
+        <a href="/home/" class="btn">Return to Home</a>
+    </div>
 </body>
 </html>
 
@@ -5866,14 +6314,15 @@ templates\home.html
         <div class="stat-label">Read</div>
     </div>
     <div class="stat-card" onclick="showFollowData()">
-        <div class="stat-icon">👥</div>
-        <div class="stat-number" id="followersCount">{{ followers_count|default:0 }}</div>
-        <div class="stat-label">Followers</div>
-    </div>
-    <div class="stat-card" onclick="showFollowData()">
-        <div class="stat-icon">🔍</div>
-        <div class="stat-number" id="followingCount">{{ following_count|default:0 }}</div>
-        <div class="stat-label">Following</div>
+    <div class="stat-icon">👥</div>
+    <div class="stat-number" id="followersCount">0</div>
+    <div class="stat-label">Followers</div>
+</div>
+<div class="stat-card" onclick="showFollowData()">
+    <div class="stat-icon">🔍</div>
+    <div class="stat-number" id="followingCount">0</div>
+    <div class="stat-label">Following</div>
+</div>
     </div>
 </div>
 
@@ -6038,6 +6487,9 @@ templates\home.html
     // Load user stats from cloud
 
     // Load user stats from cloud
+// Replace the existing stats loading code in home.html with this:
+
+// Load user stats from cloud
 async function loadUserStats() {
     try {
         const response = await fetch(`/api/user-stats/${CURRENT_USER_ID}/`);
@@ -6045,14 +6497,14 @@ async function loadUserStats() {
 
         if (data.success) {
             // Update the stats with real data from cloud
-            document.getElementById('wantToReadCount').textContent = data.stats.want_to_read;
-            document.getElementById('currentlyReadingCount').textContent = data.stats.currently_reading;
-            document.getElementById('readCount').textContent = data.stats.read;
+            document.getElementById('wantToReadCount').textContent = data.stats.want_to_read || 0;
+            document.getElementById('currentlyReadingCount').textContent = data.stats.currently_reading || 0;
+            document.getElementById('readCount').textContent = data.stats.read || 0;
 
             // Also update the data-target attributes for animation
-            document.getElementById('wantToReadCount').setAttribute('data-target', data.stats.want_to_read);
-            document.getElementById('currentlyReadingCount').setAttribute('data-target', data.stats.currently_reading);
-            document.getElementById('readCount').setAttribute('data-target', data.stats.read);
+            document.getElementById('wantToReadCount').setAttribute('data-target', data.stats.want_to_read || 0);
+            document.getElementById('currentlyReadingCount').setAttribute('data-target', data.stats.currently_reading || 0);
+            document.getElementById('readCount').setAttribute('data-target', data.stats.read || 0);
 
             // Animate the counters
             const counters = document.querySelectorAll('.stat-number');
@@ -6060,6 +6512,10 @@ async function loadUserStats() {
         }
     } catch (error) {
         console.error('Error loading stats:', error);
+        // Set to 0 on error
+        document.getElementById('wantToReadCount').textContent = '0';
+        document.getElementById('currentlyReadingCount').textContent = '0';
+        document.getElementById('readCount').textContent = '0';
     }
 }
 
@@ -6070,17 +6526,40 @@ async function loadFollowData() {
         const data = await response.json();
 
         if (data.status === 'success') {
-            document.getElementById('followersCount').textContent = data.followers_count;
-            document.getElementById('followingCount').textContent = data.following_count;
+            // Safely set the counts with fallback to 0
+            const followersCount = data.followers_count || 0;
+            const followingCount = data.following_count || 0;
+
+            document.getElementById('followersCount').textContent = followersCount;
+            document.getElementById('followingCount').textContent = followingCount;
+
+            // Also set data-target for animation
+            document.getElementById('followersCount').setAttribute('data-target', followersCount);
+            document.getElementById('followingCount').setAttribute('data-target', followingCount);
+        } else {
+            // Set to 0 if failed
+            document.getElementById('followersCount').textContent = '0';
+            document.getElementById('followingCount').textContent = '0';
         }
     } catch (error) {
         console.error('Error loading follow data:', error);
+        // Set to 0 on error
+        document.getElementById('followersCount').textContent = '0';
+        document.getElementById('followingCount').textContent = '0';
     }
 }
 
 function initCounters() {
+    // First set all to 0 to avoid NaN
+    document.getElementById('wantToReadCount').textContent = '0';
+    document.getElementById('currentlyReadingCount').textContent = '0';
+    document.getElementById('readCount').textContent = '0';
+    document.getElementById('followersCount').textContent = '0';
+    document.getElementById('followingCount').textContent = '0';
+
+    // Then load the actual data
     loadUserStats();
-    loadFollowData(); // Load follow counts too
+    loadFollowData();
 }
 
     // Author functions
@@ -6549,50 +7028,106 @@ templates\index.html
     </form>
 
     <!-- Sign Up Form -->
-    <form id="signup-form">
-      <div class="input-group">
-        <label>Username</label>
-        <input type="text" name="username" placeholder="Choose a username" required minlength="3">
-      </div>
-      <div class="input-group">
-        <label>Email</label>
-        <input type="email" name="email" placeholder="your.email@example.com" required>
-      </div>
-      <div class="input-group">
-        <label>Password</label>
-        <input type="password" name="password" id="signup-password" placeholder="Create a password" required minlength="6">
-      </div>
-      <div class="password-strength" id="password-strength" style="display: none;">
-        <div class="strength-bar">
-          <div class="strength-fill" id="strength-fill"></div>
-        </div>
-        <div class="strength-text" id="strength-text"></div>
-      </div>
-      <div class="input-group">
-        <label>Confirm Password</label>
-        <input type="password" name="confirm_password" placeholder="Confirm your password" required minlength="6">
-      </div>
-      <button type="submit">
-        <span class="btn-text">Create Account</span>
-        <div class="loader"></div>
-      </button>
+    <!-- Sign Up Form - Replace the existing signup form section -->
+<form id="signup-form">
+  <div class="input-group">
+    <label>Username</label>
+    <input type="text" name="username" placeholder="Choose a username" required minlength="3">
+  </div>
+  <div class="input-group">
+    <label>Email</label>
+    <input type="email" name="email" placeholder="your.email@example.com" required>
+  </div>
+  <div class="input-group">
+    <label>Password</label>
+    <input type="password" name="password" id="signup-password" placeholder="Create a password" required minlength="6">
+  </div>
+  <div class="password-strength" id="password-strength" style="display: none;">
+    <div class="strength-bar">
+      <div class="strength-fill" id="strength-fill"></div>
+    </div>
+    <div class="strength-text" id="strength-text"></div>
+  </div>
+  <div class="input-group">
+    <label>Confirm Password</label>
+    <input type="password" name="confirm_password" placeholder="Confirm your password" required minlength="6">
+  </div>
 
-      <div class="divider">
-        <span>or continue with</span>
-      </div>
 
-      <button type="button" class="google-btn" id="google-signup-btn">
-        <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
-          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-        </svg>
-        <span class="btn-text">Sign up with Google</span>
-      </button>
+  <button type="submit">
+    <span class="btn-text">Create Account</span>
+    <div class="loader"></div>
+  </button>
 
-      <div class="message" id="signup-message"></div>
-    </form>
+  <div class="divider">
+    <span>or continue with</span>
+  </div>
+
+  <button type="button" class="google-btn" id="google-signup-btn">
+    <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
+    <span class="btn-text">Sign up with Google</span>
+  </button>
+
+  <div class="message" id="signup-message"></div>
+</form>
+
+<!-- Updated signup submit handler - Add this to the script section -->
+<script>
+// Signup submit - REPLACE the existing signup form handler
+signupForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = signupForm.querySelector('button[type="submit"]');
+  setLoading(btn, true);
+  clearMessages();
+
+  if (signupForm.password.value !== signupForm.confirm_password.value) {
+    showMessage('signup-message', 'Passwords do not match!', 'error');
+    setLoading(btn, false);
+    return;
+  }
+
+  const data = {
+    username: signupForm.username.value.trim(),
+    email: signupForm.email.value.trim(),
+    password: signupForm.password.value,
+    confirm_password: signupForm.confirm_password.value,
+    is_author: document.getElementById('is_author').checked  // Add author preference
+  };
+
+  try {
+    const res = await fetch('/signup/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify(data)
+    });
+    const response = await res.json();
+
+    if (response.status === 'success') {
+      showMessage('signup-message', response.message, 'success');
+
+      // Redirect after 1 second
+      setTimeout(() => {
+        window.location.href = response.redirect;
+      }, 1000);
+    } else {
+      showMessage('signup-message', response.message, 'error');
+    }
+  } catch (err) {
+    showMessage('signup-message', 'Connection error. Please try again.', 'error');
+    console.error(err);
+  } finally {
+    setLoading(btn, false);
+  }
+});
+</script>
 
     <!-- Forgot Password Form -->
     <form id="forgot-form">

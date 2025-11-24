@@ -74,7 +74,7 @@ def shelves(request):
     })
 
 
-@ensure_csrf_cookie
+@csrf_exempt
 def author_create(request):
     username = request.session.get('username')
     user_id = request.session.get('user_id')
@@ -94,32 +94,46 @@ def author_create(request):
     if request.method == 'POST':
         try:
             bio = request.POST.get('bio', '')
+            user_role = request.POST.get('user_role', 'reader')
             profile_picture = request.FILES.get('profile_picture')
 
-            user.is_author = True
+            print(f"Processing author creation for user {username}")
+            print(f"Role: {user_role}, Bio length: {len(bio)}")
+
+            # Set is_author based on choice
+            user.is_author = (user_role == 'author')
             user.author_completed = True
             user.bio = bio
 
             if profile_picture:
+                print(f"Processing profile picture upload")
                 profile_filename = f"profile_{uuid.uuid4()}{os.path.splitext(profile_picture.name)[1]}"
                 profile_url = upload_to_supabase(profile_picture, 'profiles', profile_filename)
                 if profile_url:
                     user.profile_picture = profile_url
+                    print(f"Profile picture uploaded: {profile_url}")
 
             user.save(update_fields=['is_author', 'author_completed', 'bio', 'profile_picture'])
 
-            request.session['is_author'] = True
+            request.session['is_author'] = user.is_author
             request.session['author_completed'] = True
+
+            success_message = 'Author profile created successfully!' if user.is_author else 'Profile created successfully!'
+
+            print(f"Author creation successful for {username}")
 
             return JsonResponse({
                 'status': 'success',
-                'message': 'Author profile created successfully!',
+                'message': success_message,
                 'redirect': '/home/'
             })
         except Exception as e:
+            print(f"Error in author_create: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return JsonResponse({
                 'status': 'error',
-                'message': f'Error creating author profile: {str(e)}'
+                'message': f'Error creating profile: {str(e)}'
             }, status=500)
 
     return render(request, 'author_create.html', {
@@ -804,12 +818,25 @@ def login_view(request):
             request.session['is_author'] = user.is_author
             request.session['author_completed'] = user.author_completed
 
-            return JsonResponse({
-                'status': 'success',
-                'message': f'Welcome back, {username}!',
-                'redirect': '/home/',
-                'is_author': user.is_author
-            })
+            print(f"🔍 LOGIN: User {username} - is_author: {user.is_author}, author_completed: {user.author_completed}")
+
+            # Check if user needs to complete author profile
+            if user.is_author and not user.author_completed:
+                return JsonResponse({
+                    'status': 'success',
+                    'message': f'Welcome back, {username}! Please complete your author profile.',
+                    'redirect': '/author-create/',
+                    'is_author': user.is_author,
+                    'needs_author_setup': True
+                })
+            else:
+                return JsonResponse({
+                    'status': 'success',
+                    'message': f'Welcome back, {username}!',
+                    'redirect': '/home/',
+                    'is_author': user.is_author,
+                    'needs_author_setup': False
+                })
 
         except Exception as e:
             print(f"✗ LOGIN ERROR: {e}")
@@ -922,8 +949,8 @@ def signup_view(request):
                 Password=hashed_password,
                 Email=email,
                 is_verified=True,
-                is_author=True,
-                author_completed=False,
+                is_author=True,  # Everyone is an author by default
+                author_completed=False,  # But needs to complete profile
                 Read={},
                 Currently_Reading={},
                 Want_To_Read={},
@@ -933,17 +960,19 @@ def signup_view(request):
                 following_count=0
             )
 
-            print(f"✅ User created: {username} (ID: {user.UserID})")
+            print(f"✅ User created: {username} (ID: {user.UserID}) - Author: {user.is_author}, Completed: {user.author_completed}")
 
+            # Set session
             request.session['username'] = username
             request.session['user_id'] = user.UserID
             request.session['is_author'] = True
             request.session['author_completed'] = False
 
+            # ALWAYS redirect new signups to author creation
             return JsonResponse({
                 'status': 'success',
-                'message': 'Account created successfully! You can now login.',
-                'redirect': '/home/'
+                'message': 'Account created! Please complete your author profile.',
+                'redirect': '/author-create/'
             })
 
         except Exception as e:

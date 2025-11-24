@@ -153,7 +153,7 @@ class Credentials(models.Model):
             Email=email,
             google_id=google_id,
             is_verified=True,
-            is_author=True,
+            is_author=False,
             author_completed=False,
             Read={},
             Currently_Reading={},

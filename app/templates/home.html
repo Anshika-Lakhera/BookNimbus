@@ -812,15 +812,16 @@
         <div class="stat-number" id="readCount" data-target="0">0</div>
         <div class="stat-label">Read</div>
     </div>
-    <div class="stat-card" onclick="showFollowData()">
-        <div class="stat-icon">👥</div>
-        <div class="stat-number" id="followersCount">{{ followers_count|default:0 }}</div>
-        <div class="stat-label">Followers</div>
-    </div>
-    <div class="stat-card" onclick="showFollowData()">
-        <div class="stat-icon">🔍</div>
-        <div class="stat-number" id="followingCount">{{ following_count|default:0 }}</div>
-        <div class="stat-label">Following</div>
+<div class="stat-card">
+    <div class="stat-icon">👥</div>
+    <div class="stat-number" id="followersCount" data-target="0">0</div>
+    <div class="stat-label">Followers</div>
+</div>
+<div class="stat-card">
+    <div class="stat-icon">🔍</div>
+    <div class="stat-number" id="followingCount" data-target="0">0</div>
+    <div class="stat-label">Following</div>
+</div>
     </div>
 </div>
 
@@ -966,25 +967,34 @@
 
     // Stats counter animation
     function animateCounter(element) {
-      const target = parseInt(element.getAttribute('data-target'));
-      const duration = 1500;
-      const step = target / (duration / 16);
-      let current = 0;
+  const target = parseInt(element.getAttribute('data-target'));
 
-      const timer = setInterval(() => {
-        current += step;
-        if (current >= target) {
-          element.textContent = target;
-          clearInterval(timer);
-        } else {
-          element.textContent = Math.floor(current);
-        }
-      }, 16);
+  // Skip animation if target is NaN or invalid
+  if (isNaN(target)) {
+    return;
+  }
+
+  const duration = 1500;
+  const step = target / (duration / 16);
+  let current = 0;
+
+  const timer = setInterval(() => {
+    current += step;
+    if (current >= target) {
+      element.textContent = target;
+      clearInterval(timer);
+    } else {
+      element.textContent = Math.floor(current);
     }
+  }, 16);
+}
 
     // Load user stats from cloud
 
     // Load user stats from cloud
+// Replace the existing stats loading code in home.html with this:
+
+// Load user stats from cloud
 async function loadUserStats() {
     try {
         const response = await fetch(`/api/user-stats/${CURRENT_USER_ID}/`);
@@ -992,14 +1002,14 @@ async function loadUserStats() {
 
         if (data.success) {
             // Update the stats with real data from cloud
-            document.getElementById('wantToReadCount').textContent = data.stats.want_to_read;
-            document.getElementById('currentlyReadingCount').textContent = data.stats.currently_reading;
-            document.getElementById('readCount').textContent = data.stats.read;
+            document.getElementById('wantToReadCount').textContent = data.stats.want_to_read || 0;
+            document.getElementById('currentlyReadingCount').textContent = data.stats.currently_reading || 0;
+            document.getElementById('readCount').textContent = data.stats.read || 0;
 
             // Also update the data-target attributes for animation
-            document.getElementById('wantToReadCount').setAttribute('data-target', data.stats.want_to_read);
-            document.getElementById('currentlyReadingCount').setAttribute('data-target', data.stats.currently_reading);
-            document.getElementById('readCount').setAttribute('data-target', data.stats.read);
+            document.getElementById('wantToReadCount').setAttribute('data-target', data.stats.want_to_read || 0);
+            document.getElementById('currentlyReadingCount').setAttribute('data-target', data.stats.currently_reading || 0);
+            document.getElementById('readCount').setAttribute('data-target', data.stats.read || 0);
 
             // Animate the counters
             const counters = document.querySelectorAll('.stat-number');
@@ -1007,6 +1017,10 @@ async function loadUserStats() {
         }
     } catch (error) {
         console.error('Error loading stats:', error);
+        // Set to 0 on error
+        document.getElementById('wantToReadCount').textContent = '0';
+        document.getElementById('currentlyReadingCount').textContent = '0';
+        document.getElementById('readCount').textContent = '0';
     }
 }
 
@@ -1017,17 +1031,50 @@ async function loadFollowData() {
         const data = await response.json();
 
         if (data.status === 'success') {
-            document.getElementById('followersCount').textContent = data.followers_count;
-            document.getElementById('followingCount').textContent = data.following_count;
+            const followersCount = data.followers_count || 0;
+            const followingCount = data.following_count || 0;
+
+            const followersEl = document.getElementById('followersCount');
+            const followingEl = document.getElementById('followingCount');
+
+            // Set the data-target first
+            followersEl.setAttribute('data-target', followersCount);
+            followingEl.setAttribute('data-target', followingCount);
+
+            // Set initial value to 0 if not already set
+            if (followersEl.textContent === '' || followersEl.textContent === 'NaN') {
+                followersEl.textContent = '0';
+            }
+            if (followingEl.textContent === '' || followingEl.textContent === 'NaN') {
+                followingEl.textContent = '0';
+            }
+
+            // Animate to the target
+            animateCounter(followersEl);
+            animateCounter(followingEl);
         }
     } catch (error) {
         console.error('Error loading follow data:', error);
+        document.getElementById('followersCount').textContent = '0';
+        document.getElementById('followingCount').textContent = '0';
     }
 }
 
 function initCounters() {
+    // First set all to 0 to avoid NaN
+    const counters = ['wantToReadCount', 'currentlyReadingCount', 'readCount', 'followersCount', 'followingCount'];
+    counters.forEach(id => {
+        const element = document.getElementById(id);
+        element.textContent = '0';
+        element.setAttribute('data-target', '0');
+    });
+
+    // Then load the actual data
     loadUserStats();
-    loadFollowData(); // Load follow counts too
+    loadFollowData();
+
+    // Refresh follow data every 30 seconds
+    setInterval(loadFollowData, 30000);
 }
 
     // Author functions

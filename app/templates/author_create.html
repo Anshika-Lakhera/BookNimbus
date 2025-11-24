@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Complete Your Author Profile</title>
+    <title>Complete Your Profile - BookNimbus</title>
     <style>
         * {
             margin: 0;
@@ -25,7 +25,7 @@
             background: white;
             border-radius: 20px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            max-width: 600px;
+            max-width: 500px;
             width: 100%;
             padding: 40px;
             animation: slideUp 0.5s ease-out;
@@ -58,6 +58,67 @@
             font-size: 16px;
         }
 
+        /* Choice Section */
+        .choice-section {
+            margin-bottom: 30px;
+        }
+
+        .choice-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .choice-options {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .choice-card {
+            flex: 1;
+            padding: 25px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: white;
+            text-align: center;
+        }
+
+        .choice-card:hover {
+            border-color: #667eea;
+            background: #f0f4ff;
+            transform: translateY(-2px);
+        }
+
+        .choice-card.selected {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .choice-icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .choice-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 16px;
+        }
+
+        .choice-description {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        /* Form Fields */
         .form-group {
             margin-bottom: 20px;
         }
@@ -129,24 +190,46 @@
             border: 3px solid #667eea;
         }
 
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
         .submit-btn {
-            width: 100%;
+            flex: 1;
             padding: 16px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border: none;
             border-radius: 10px;
             color: white;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-            margin-top: 10px;
         }
 
         .submit-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .skip-btn {
+            flex: 1;
+            padding: 16px;
+            background: white;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            color: #667eea;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .skip-btn:hover {
+            background: #f0f4ff;
         }
 
         .loader {
@@ -192,45 +275,139 @@
             border: 1px solid rgba(255, 71, 87, 0.3);
             color: #ff4757;
         }
+
+        .author-fields {
+            display: none;
+        }
+
+        .author-fields.show {
+            display: block;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #1565c0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Complete Your Author Profile</h1>
-            <p>Tell readers about yourself and upload a profile picture</p>
+            <h1>Welcome to BookNimbus! 📚</h1>
+            <p>Let's set up your profile</p>
         </div>
 
-        <form id="author-form" enctype="multipart/form-data">
-            <div class="form-group">
-                <label for="bio">Author Bio</label>
-                <textarea id="bio" name="bio" placeholder="Tell readers about yourself, your writing style, and what inspires you..."></textarea>
+        <!-- Choice Section -->
+        <div class="choice-section">
+            <div class="choice-title">How do you want to use BookNimbus?</div>
+            <div class="choice-options">
+                <div class="choice-card" onclick="selectRole('reader')">
+                    <div class="choice-icon">📖</div>
+                    <div class="choice-label">Reader</div>
+                    <div class="choice-description">Discover and track books you love</div>
+                </div>
+                <div class="choice-card" onclick="selectRole('author')">
+                    <div class="choice-icon">✍️</div>
+                    <div class="choice-label">Author</div>
+                    <div class="choice-description">Publish your books and share your stories</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Author Fields (shown when author is selected) -->
+        <div class="author-fields" id="authorFields">
+            <div class="info-box">
+                🎉 Great! As an author, you'll be able to publish books, write blog posts, and connect with readers!
             </div>
 
             <div class="form-group">
-                <label for="profile_picture">Profile Picture (Optional)</label>
+                <label for="author_bio">Author Bio (Optional)</label>
+                <textarea id="author_bio" name="bio" placeholder="Tell readers about yourself, your writing style, and what inspires you..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="author_picture">Profile Picture (Optional)</label>
                 <div class="file-input">
-                    <input type="file" id="profile_picture" name="profile_picture" accept="image/*">
-                    <label for="profile_picture" class="file-input-label">
+                    <input type="file" id="author_picture" name="profile_picture" accept="image/*">
+                    <label for="author_picture" class="file-input-label">
                         📷 Click to upload profile picture
                     </label>
                 </div>
-                <div class="preview" id="profile-preview"></div>
+                <div class="preview" id="author-preview"></div>
+            </div>
+        </div>
+
+        <!-- Reader Fields (shown when reader is selected) -->
+        <div class="author-fields" id="readerFields">
+            <div class="info-box">
+                ✨ As a reader, you can track your reading progress, discover new books, and follow your favorite authors!
             </div>
 
-            <button type="submit" class="submit-btn" id="submit-btn">
+            <div class="form-group">
+                <label for="reader_bio">About You (Optional)</label>
+                <textarea id="reader_bio" name="bio" placeholder="Tell us about your reading interests..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="reader_picture">Profile Picture (Optional)</label>
+                <div class="file-input">
+                    <input type="file" id="reader_picture" name="profile_picture" accept="image/*">
+                    <label for="reader_picture" class="file-input-label">
+                        📷 Click to upload profile picture
+                    </label>
+                </div>
+                <div class="preview" id="reader-preview"></div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <button class="submit-btn" onclick="submitProfile()" id="submitBtn">
                 <span class="btn-text">Complete Profile</span>
                 <div class="loader"></div>
             </button>
+            <button class="skip-btn" onclick="skipProfile()">Skip for Now</button>
+        </div>
 
-            <div class="message" id="message"></div>
-        </form>
+        <div class="message" id="message"></div>
     </div>
 
     <script>
-        document.getElementById('profile_picture').addEventListener('change', function(e) {
+        let selectedRole = null;
+
+        // Select role function
+        function selectRole(role) {
+            selectedRole = role;
+
+            // Update UI - highlight selected card
+            document.querySelectorAll('.choice-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            event.currentTarget.classList.add('selected');
+
+            // Show appropriate fields
+            document.getElementById('authorFields').classList.remove('show');
+            document.getElementById('readerFields').classList.remove('show');
+
+            if (role === 'author') {
+                document.getElementById('authorFields').classList.add('show');
+            } else {
+                document.getElementById('readerFields').classList.add('show');
+            }
+
+            // Enable submit button
+            document.getElementById('submitBtn').disabled = false;
+        }
+
+        // Handle file preview for author
+        document.getElementById('author_picture').addEventListener('change', function(e) {
             const file = e.target.files[0];
-            const preview = document.getElementById('profile-preview');
+            const preview = document.getElementById('author-preview');
 
             if (file) {
                 const reader = new FileReader();
@@ -241,18 +418,62 @@
             }
         });
 
-        document.getElementById('author-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        // Handle file preview for reader
+        document.getElementById('reader_picture').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const preview = document.getElementById('reader-preview');
 
-            const submitBtn = document.getElementById('submit-btn');
-            const messageEl = document.getElementById('message');
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.innerHTML = `<img src="${e.target.result}" alt="Profile preview" class="profile-preview">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
 
-            submitBtn.classList.add('loading');
-            submitBtn.disabled = true;
-            messageEl.style.display = 'none';
+        // Skip profile function
+        function skipProfile() {
+            if (confirm('Are you sure you want to skip? You can always complete your profile later.')) {
+                window.location.href = '/home/';
+            }
+        }
+
+        // Submit profile function
+        async function submitProfile() {
+            if (!selectedRole) {
+                showMessage('Please select whether you want to be a Reader or Author', 'error');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            setLoading(submitBtn, true);
+            clearMessages();
 
             try {
-                const formData = new FormData(this);
+                const formData = new FormData();
+
+                // Add role
+                formData.append('user_role', selectedRole);
+
+                // Add bio based on role
+                if (selectedRole === 'author') {
+                    const bio = document.getElementById('author_bio').value;
+                    formData.append('bio', bio);
+
+                    const picture = document.getElementById('author_picture').files[0];
+                    if (picture) {
+                        formData.append('profile_picture', picture);
+                    }
+                } else {
+                    const bio = document.getElementById('reader_bio').value;
+                    formData.append('bio', bio);
+
+                    const picture = document.getElementById('reader_picture').files[0];
+                    if (picture) {
+                        formData.append('profile_picture', picture);
+                    }
+                }
 
                 const response = await fetch('/author-create/', {
                     method: 'POST',
@@ -265,9 +486,7 @@
                 const data = await response.json();
 
                 if (data.status === 'success') {
-                    messageEl.textContent = data.message;
-                    messageEl.className = 'message success';
-                    messageEl.style.display = 'block';
+                    showMessage(data.message, 'success');
 
                     setTimeout(() => {
                         window.location.href = data.redirect;
@@ -276,14 +495,34 @@
                     throw new Error(data.message);
                 }
             } catch (error) {
-                messageEl.textContent = error.message || 'Error creating author profile. Please try again.';
-                messageEl.className = 'message error';
-                messageEl.style.display = 'block';
+                showMessage(error.message || 'Error creating profile. Please try again.', 'error');
             } finally {
-                submitBtn.classList.remove('loading');
-                submitBtn.disabled = false;
+                setLoading(submitBtn, false);
             }
-        });
+        }
+
+        // Helper functions
+        function showMessage(message, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = message;
+            messageEl.className = `message ${type}`;
+            messageEl.style.display = 'block';
+        }
+
+        function clearMessages() {
+            const messageEl = document.getElementById('message');
+            messageEl.style.display = 'none';
+        }
+
+        function setLoading(button, loading) {
+            if (loading) {
+                button.classList.add('loading');
+                button.disabled = true;
+            } else {
+                button.classList.remove('loading');
+                button.disabled = false;
+            }
+        }
 
         function getCSRFToken() {
             const name = 'csrftoken';
@@ -300,6 +539,11 @@
             }
             return cookieValue;
         }
+
+        // Initialize - disable submit button until role is selected
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('submitBtn').disabled = true;
+        });
     </script>
 </body>
 </html>
